@@ -34,9 +34,41 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="API-1.0">
+      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\API-1.0.dll</HintPath>
+    </Reference>
+    <Reference Include="API-1.1">
+      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\API-1.1.dll</HintPath>
+    </Reference>
     <Reference Include="Chemistry, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\Chemistry.dll</HintPath>
+    </Reference>
+    <Reference Include="ESAPI-1.0">
+      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\ESAPI-1.0.dll</HintPath>
+    </Reference>
+    <Reference Include="ESAPI-1.1">
+      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\ESAPI-1.1.dll</HintPath>
     </Reference>
     <Reference Include="FlashLFQ, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\FlashLFQ.dll</HintPath>
@@ -90,12 +122,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connection.cs" />
+    <Compile Include="CustomScansTandemByArrival.cs" />
+    <Compile Include="DataReceiver.cs" />
     <Compile Include="MzSpectrumBU.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Data\elements.dat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

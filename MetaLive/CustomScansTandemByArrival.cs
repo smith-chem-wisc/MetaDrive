@@ -27,7 +27,7 @@ using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 using Thermo.Interfaces.InstrumentAccess_V1.MsScanContainer;
 using IMsScan = Thermo.Interfaces.InstrumentAccess_V2.MsScanContainer.IMsScan;
 
-namespace PlacingScans
+namespace MetaLive
 {
 	/// <summary>
 	/// Place 10 individual scans after arrival of at least one scan.
@@ -50,7 +50,7 @@ namespace PlacingScans
 					Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
 
 					orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
-					Thread.CurrentThread.Join(60000);
+					Thread.CurrentThread.Join(20000);
 					orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
 				}
 			}

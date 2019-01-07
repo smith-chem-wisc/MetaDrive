@@ -5,7 +5,7 @@ using Microsoft.Win32;
 using Thermo.Interfaces.ExactiveAccess_V1;
 using Thermo.Interfaces.InstrumentAccess_V1;
 
-namespace RealTimeGUI
+namespace MetaLive
 {
 	/// <summary>
 	/// This class hosts the single method <see cref="GetFirstInstrument"/> to get access to the first Exactive API controlled instrument.

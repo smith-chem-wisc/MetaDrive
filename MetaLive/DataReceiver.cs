@@ -20,11 +20,16 @@
 // SOFTWARE.
 #endregion legal notice
 using System;
+using System.Linq;
 using System.Threading;
 
 using Thermo.Interfaces.ExactiveAccess_V1;
 using Thermo.Interfaces.InstrumentAccess_V1.MsScanContainer;
 using IMsScan = Thermo.Interfaces.InstrumentAccess_V2.MsScanContainer.IMsScan;
+
+using MassSpectrometry;
+using MzLibUtil;
+
 
 namespace MetaLive
 {
@@ -63,10 +68,24 @@ namespace MetaLive
 
                 // The common part is shared by all Thermo Fisher instruments, these settings mainly form the so called filter string
                 // which also appears on top of each spectrum in many visualizers.
-                Dump("Common", scan.CommonInformation);
+                //Console.WriteLine("----------------Common--------------");
+                //Dump("Common", scan.CommonInformation);
 
                 // The specific part is individual for each instrument type. Many values are shared by different Exactive Series models.
-                Dump("Specific", scan.SpecificInformation);
+                //Console.WriteLine("----------------Specific--------------");
+                //Dump("Specific", scan.SpecificInformation);
+
+                Console.WriteLine("---------------------------------------");
+                TakeOverInstrumentMessage(scan);
+
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    var spectrum = TurnScan2Spectrum(scan);
+
+                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), 2, 8, 5.0, 3);
+
+                    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.ToList().Count);
+                }
             }
 		}
 
@@ -78,7 +97,6 @@ namespace MetaLive
 		private void Orbitrap_AcquisitionStreamOpening(object sender, MsAcquisitionOpeningEventArgs e)
 		{
 			Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream opens (start of method)");
-            Dump("Specific", e.SpecificInformation);
         }
 
         private void Dump(string title, IInfoContainer container)
@@ -102,6 +120,60 @@ namespace MetaLive
                 }
                 catch { /* up to and including 2.8SP1 there is a bug displaying items which are null and if Foundation 3.1SP4 is used with CommonCore */ }
             }
+        }
+
+        private void TakeOverInstrumentMessage(IMsScan scan)
+        {
+            string key = "MSOrder";
+            string value;
+            try
+            {
+                if (scan.CommonInformation.TryGetValue(key, out value))
+                {
+                    if (value != "MS")
+                    {
+                        return;
+                    }
+                    Console.WriteLine("   {0,-35} = {1}", key, value);
+                    Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+
+                    object massRanges;
+                    try
+                    {
+                        if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+                        {
+                            Console.WriteLine(massRanges.GetType().ToString());
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+
+        }
+
+        private bool IsMS1Scan(IMsScan scan)
+        {
+            string value;
+            if (scan.CommonInformation.TryGetValue("MSOrder", out value))
+            {
+                if (value == "MS")
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private MzSpectrum TurnScan2Spectrum(IMsScan scan)
+        {
+            return new MzSpectrum(scan.Centroids.Select(p=>p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+        }
+
+        private MzRange GetMzRange(IMsScan scan)
+        {
+            return new MzRange(scan.Centroids.Min(p =>p.Mz), scan.Centroids.Max(p => p.Mz));
         }
     }
 }
