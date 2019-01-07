@@ -16,12 +16,19 @@ namespace MetaLive
         static void Main(string[] args)
         {
             //Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+
             var DataDir = AppDomain.CurrentDomain.BaseDirectory;
             var ElementsLocation = Path.Combine(DataDir, @"Data", @"elements.dat");
             UsefulProteomicsDatabases.Loaders.LoadElements(ElementsLocation);
+
+            //For Deconvolution, generate avagine model first.
             var test = new MzSpectrum(new double[]{ 1}, new double[] { 1 }, true);
 
+            //Console.WriteLine("----------------------------");
+            //new CustomScansTandemByArrival().DoJob();
 
+            Console.WriteLine("----------------------------");
             new DataReceiver().DoJob();
 
             Console.WriteLine("Press any key to continue...");

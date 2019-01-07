@@ -27,6 +27,8 @@ using Thermo.Interfaces.ExactiveAccess_V1;
 using Thermo.Interfaces.InstrumentAccess_V1.MsScanContainer;
 using IMsScan = Thermo.Interfaces.InstrumentAccess_V2.MsScanContainer.IMsScan;
 
+using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
+
 using MassSpectrometry;
 using MzLibUtil;
 
@@ -38,23 +40,29 @@ namespace MetaLive
 	/// </summary>
 	class DataReceiver
 	{
-		internal DataReceiver() { }
+        int m_scanId = 1;   // must be != 0
+        IScans m_scans = null;
+
+        internal DataReceiver() { }
 
 		internal void DoJob()
 		{
 			using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
-				IMsScanContainer orbitrap = instrument.GetMsScanContainer(0);
-				Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
+                using (m_scans = instrument.Control.GetScans(false))
+                {
+                    IMsScanContainer orbitrap = instrument.GetMsScanContainer(0);
+                    Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
 
-				orbitrap.AcquisitionStreamOpening += Orbitrap_AcquisitionStreamOpening;
-				orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
-				orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
-				Thread.CurrentThread.Join(60000);
-				orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
-				orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
-				orbitrap.AcquisitionStreamOpening -= Orbitrap_AcquisitionStreamOpening;
-			}
+                    orbitrap.AcquisitionStreamOpening += Orbitrap_AcquisitionStreamOpening;
+                    orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
+                    orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
+                    Thread.CurrentThread.Join(30000);
+                    orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
+                    orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
+                    orbitrap.AcquisitionStreamOpening -= Orbitrap_AcquisitionStreamOpening;
+                }
+            }
 		}
 
 		private void Orbitrap_MsScanArrived(object sender, MsScanEventArgs e)
@@ -68,24 +76,35 @@ namespace MetaLive
 
                 // The common part is shared by all Thermo Fisher instruments, these settings mainly form the so called filter string
                 // which also appears on top of each spectrum in many visualizers.
-                //Console.WriteLine("----------------Common--------------");
-                //Dump("Common", scan.CommonInformation);
+                Console.WriteLine("----------------Common--------------");
+                Dump("Common", scan.CommonInformation);
 
                 // The specific part is individual for each instrument type. Many values are shared by different Exactive Series models.
-                //Console.WriteLine("----------------Specific--------------");
-                //Dump("Specific", scan.SpecificInformation);
+                Console.WriteLine("----------------Specific--------------");
+                Dump("Specific", scan.SpecificInformation);
 
                 Console.WriteLine("---------------------------------------");
+
+                TakeOverInstrumentMessage(scan, "MSOrder", "MS");
+
                 TakeOverInstrumentMessage(scan);
 
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                {
-                    var spectrum = TurnScan2Spectrum(scan);
+                PlaceScan();
 
-                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), 2, 8, 5.0, 3);
+                //if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                //{
+                //    var spectrum = TurnScan2Spectrum(scan);
 
-                    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.ToList().Count);
-                }
+                //    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), 2, 8, 5.0, 3);
+
+                //    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.ToList().Count);
+
+                //    if (IsotopicEnvelopes.Count() > 0)
+                //    {
+                //        PlaceScan();
+                //    }                  
+                //}
+
             }
 		}
 
@@ -122,35 +141,37 @@ namespace MetaLive
             }
         }
 
-        private void TakeOverInstrumentMessage(IMsScan scan)
+        private void TakeOverInstrumentMessage(IMsScan scan, string key, string expectedValue)
         {
-            string key = "MSOrder";
             string value;
             try
             {
                 if (scan.CommonInformation.TryGetValue(key, out value))
                 {
-                    if (value != "MS")
+                    if (value != expectedValue)
                     {
                         return;
                     }
                     Console.WriteLine("   {0,-35} = {1}", key, value);
                     Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+                }
+            }
+            catch {  }
+        }
 
-                    object massRanges;
-                    try
-                    {
-                        if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
-                        {
-                            Console.WriteLine(massRanges.GetType().ToString());
-                        }
-                    }
-                    catch { }
+        private void TakeOverInstrumentMessage(IMsScan scan)
+        {
+            object massRanges;
+            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
+            try
+            {
+                if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+                {
+                    x = (ThermoFisher.Foundation.IO.Range[])massRanges;                  
+                    Console.WriteLine("{0}, {1}", x.First().Low, x.First().High);
                 }
             }
             catch { }
-
-
         }
 
         private bool IsMS1Scan(IMsScan scan)
@@ -174,6 +195,36 @@ namespace MetaLive
         private MzRange GetMzRange(IMsScan scan)
         {
             return new MzRange(scan.Centroids.Min(p =>p.Mz), scan.Centroids.Max(p => p.Mz));
+        }
+
+
+
+        private void PlaceScan()
+        {
+            // If no information about possible settings are available yet or if we finished our job, we bail out.
+            if ((m_scanId > 10) || (m_scans.PossibleParameters.Length == 0))
+            {
+                return;
+            }
+
+            foreach (var item in m_scans.PossibleParameters)
+            {
+                Console.WriteLine(item.Name + "----" + item.DefaultValue + "----" + item.Help + "----" + item.Selection);
+            }
+            ICustomScan scan = m_scans.CreateCustomScan();
+            scan.RunningNumber = m_scanId++;
+            scan.Values["Resolution"] = "15000.0";
+            scan.Values["IsolationRangeLow"] = "350";
+            scan.Values["IsolationRangeLow"] = "400";
+            scan.Values["FirstMass"] = "300";
+            scan.Values["LastMass"] = "1700";
+            scan.Values["NCE"] = "20";
+            foreach (var v in scan.Values)
+            {
+                Console.WriteLine(v);
+            }       
+            Console.WriteLine("{0:HH:mm:ss,fff} placing scan {1}", DateTime.Now, scan.RunningNumber);
+            m_scans.SetCustomScan(scan);
         }
     }
 }

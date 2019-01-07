@@ -116,6 +116,10 @@
     <Reference Include="Thermo, Version=1.0.394.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\Thermo.dll</HintPath>
     </Reference>
+    <Reference Include="Thermofisher.Foundation.IO_x64, Version=3.1.60.0, Culture=neutral, PublicKeyToken=7336a1ad73b8d604, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\iapi\Thermofisher.Foundation.IO_x64.dll</HintPath>
+    </Reference>
     <Reference Include="UsefulProteomicsDatabases, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\UsefulProteomicsDatabases.dll</HintPath>
     </Reference>

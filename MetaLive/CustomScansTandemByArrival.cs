@@ -50,7 +50,7 @@ namespace MetaLive
 					Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
 
 					orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
-					Thread.CurrentThread.Join(20000);
+					Thread.CurrentThread.Join(60000);
 					orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
 				}
 			}
@@ -78,7 +78,12 @@ namespace MetaLive
 			ICustomScan scan = m_scans.CreateCustomScan();
 			scan.RunningNumber = m_scanId++;
 			scan.Values["Polarity"] = "1";
-			Console.WriteLine("{0:HH:mm:ss,fff} placing scan {1}", DateTime.Now, scan.RunningNumber);
+            scan.SingleProcessingDelay = 0.50D;
+            foreach (var v in scan.Values)
+            {
+                Console.WriteLine(v);
+            }
+            Console.WriteLine("{0:HH:mm:ss,fff} placing scan {1}", DateTime.Now, scan.RunningNumber);
 			m_scans.SetCustomScan(scan);
 		}
 	}
