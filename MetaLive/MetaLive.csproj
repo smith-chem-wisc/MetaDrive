@@ -127,7 +127,10 @@
   <ItemGroup>
     <Compile Include="Connection.cs" />
     <Compile Include="CustomScansTandemByArrival.cs" />
+    <Compile Include="DataDependentScan.cs" />
     <Compile Include="DataReceiver.cs" />
+    <Compile Include="DynamicExclusionList.cs" />
+    <Compile Include="FullMS1Scan.cs" />
     <Compile Include="MzSpectrumBU.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -22,6 +22,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Collections.Generic;
 
 using Thermo.Interfaces.ExactiveAccess_V1;
 using Thermo.Interfaces.InstrumentAccess_V1.MsScanContainer;
@@ -40,24 +41,41 @@ namespace MetaLive
 	/// </summary>
 	class DataReceiver
 	{
-        int m_scanId = 1;   // must be != 0
         IScans m_scans = null;
+        bool isTakeOver = false;
+        bool scanHasbeenPlaced = false;
 
-        internal DataReceiver() { }
+        internal DataReceiver()
+        {
+            dataDependentScans = new Stack<DataDependentScan>();
+            DynamicExclusionList = new DynamicExclusionList();
+        }
+        Stack<DataDependentScan> dataDependentScans { get; set; }
+        DynamicExclusionList DynamicExclusionList { get; set; }
 
-		internal void DoJob()
+        internal void DoJob(int timeInMicrosecond)
 		{
-			using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
+            //TO DO: Maybe dangerous because the DynamicExclusionList.ExclusionList can be attended by two function at same time. Not sure about he thread here. 
+            System.Timers.Timer Timer = new System.Timers.Timer(interval: 15000);
+            Timer.AutoReset = true;
+            Timer.Enabled = true;
+            using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
                 using (m_scans = instrument.Control.GetScans(false))
-                {
+                {                    
                     IMsScanContainer orbitrap = instrument.GetMsScanContainer(0);
-                    Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
+                    Console.WriteLine("Waiting for scans on detector " + orbitrap.DetectorClass + "...");
 
                     orbitrap.AcquisitionStreamOpening += Orbitrap_AcquisitionStreamOpening;
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
-                    Thread.CurrentThread.Join(30000);
+
+                    Timer.Elapsed += DynamicExclusionList.exclustionListDynamicChange;
+
+                    Thread.CurrentThread.Join(timeInMicrosecond);
+
+                    Timer.Elapsed -= DynamicExclusionList.exclustionListDynamicChange;
+
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
                     orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
                     orbitrap.AcquisitionStreamOpening -= Orbitrap_AcquisitionStreamOpening;
@@ -72,41 +90,84 @@ namespace MetaLive
 
 			using (IMsScan scan = (IMsScan) e.GetScan())	// caution! You must dispose this, or you block shared memory!
 			{
-				Console.WriteLine("\n{0:HH:mm:ss,fff} scan with {1} centroids arrived", DateTime.Now, scan.CentroidCount);
+                Console.WriteLine("==================================================");
+                Console.WriteLine("\n{0:HH:mm:ss,fff} scan with {1} centroids arrived", DateTime.Now, scan.CentroidCount);
 
-                // The common part is shared by all Thermo Fisher instruments, these settings mainly form the so called filter string
-                // which also appears on top of each spectrum in many visualizers.
-                Console.WriteLine("----------------Common--------------");
-                Dump("Common", scan.CommonInformation);
+                if (isTakeOver)
+                {
+                    //scanHasbeenPlaced = false;
+                    //If the coming scan is MS2 scan, add the scan precusor into exclusion list.
+                    if (!IsMS1Scan(scan))
+                    {
+                        Console.WriteLine("MS2 Scan arrived.");
+                        //DynamicExclusionList.exclusionList.Enqueue(getPrecusorMass(scan));
+                        //Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                    }
 
-                // The specific part is individual for each instrument type. Many values are shared by different Exactive Series models.
-                Console.WriteLine("----------------Specific--------------");
-                Dump("Specific", scan.SpecificInformation);
 
-                Console.WriteLine("---------------------------------------");
+                    if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                    {                     
+                        Console.WriteLine("MS1 Scan arrived. Deconvolute:");
 
-                TakeOverInstrumentMessage(scan, "MSOrder", "MS");
+                        var spectrum = TurnScan2Spectrum(scan);
 
-                TakeOverInstrumentMessage(scan);
+                        //TO DO: add function to validate isotopicenvelopes is not in exclusion list.
+                        var IsotopicEnvelopes = spectrum.DeconvoluteBU(GetMzRange(scan), 2, 8, 5.0, 3);
+                        Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
 
-                PlaceScan();
+                        List<double> topNMasses = new List<double>();
+                        foreach (var iso in IsotopicEnvelopes)
+                        {
+                            if (topNMasses.Count > 10) //Select top 15 except those in exclusion list.
+                            {
+                                break;
+                            }
+                            if (DynamicExclusionList.isNotInExclusionList(iso.peaks.First().mz, 1.25))
+                            {
+                                topNMasses.Add(iso.peaks.First().mz);
+                            }
+                        }
 
-                //if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                //{
-                //    var spectrum = TurnScan2Spectrum(scan);
+                        Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute After Exclude {1}", DateTime.Now, topNMasses.Count);
 
-                //    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), 2, 8, 5.0, 3);
+                        if (topNMasses.Count() > 0)
+                        {
+                            foreach (var mass in topNMasses)
+                            {
+                                dataDependentScans.Push(new DataDependentScan(DateTime.Now, 15, m_scans, mass, 1.25));
+                                Console.WriteLine("dataDependentScans increased.");
 
-                //    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.ToList().Count);
+                                DynamicExclusionList.exclusionList.Enqueue(mass);
+                                Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                            }                        
+                        }
 
-                //    if (IsotopicEnvelopes.Count() > 0)
-                //    {
-                //        PlaceScan();
-                //    }                  
-                //}
+                        
+                        //while (dataDependentScans.Count > 0 && !scanHasbeenPlaced)
+                        while (dataDependentScans.Count > 0)
+                        {                           
+                            var x = dataDependentScans.Pop();
+                            //if (x.FinishTime > DateTime.Now)
+                            {
+                                x.PlaceMS2Scan();
+                                //scanHasbeenPlaced = true;
+                            }
+                        }
 
+                        FullMS1Scan.PlaceMS1Scan(m_scans);
+                    }
+
+                    //if (!scanHasbeenPlaced)
+                    //{
+                    //    FullMS1Scan.PlaceMS1Scan(m_scans);
+                    //}
+                }
+                else
+                {
+                    TakeOverInstrumentMessage(scan);
+                }
             }
-		}
+        }
 
 		private void Orbitrap_AcquisitionStreamClosing(object sender, EventArgs e)
 		{
@@ -116,47 +177,6 @@ namespace MetaLive
 		private void Orbitrap_AcquisitionStreamOpening(object sender, MsAcquisitionOpeningEventArgs e)
 		{
 			Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream opens (start of method)");
-        }
-
-        private void Dump(string title, IInfoContainer container)
-        {
-            Console.WriteLine(title);
-            foreach (string key in container.Names)
-            {
-                string value;
-                // the source has to be "Unknown" to match all sources. Otherwise, the source has to match.
-                // Sources can address values appearing in Tune files, general settings, but also values from
-                // status log or additional values to a scan.
-                MsScanInformationSource source = MsScanInformationSource.Unknown;   // show everything
-                try
-                {
-                    if (container.TryGetValue(key, out value, ref source))
-                    {
-                        string descr = source.ToString();
-                        descr = descr.Substring(0, Math.Min(11, descr.Length));
-                        Console.WriteLine("   {0,-11} {1,-35} = {2}", descr, key, value);
-                    }
-                }
-                catch { /* up to and including 2.8SP1 there is a bug displaying items which are null and if Foundation 3.1SP4 is used with CommonCore */ }
-            }
-        }
-
-        private void TakeOverInstrumentMessage(IMsScan scan, string key, string expectedValue)
-        {
-            string value;
-            try
-            {
-                if (scan.CommonInformation.TryGetValue(key, out value))
-                {
-                    if (value != expectedValue)
-                    {
-                        return;
-                    }
-                    Console.WriteLine("   {0,-35} = {1}", key, value);
-                    Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
-                }
-            }
-            catch {  }
         }
 
         private void TakeOverInstrumentMessage(IMsScan scan)
@@ -169,6 +189,13 @@ namespace MetaLive
                 {
                     x = (ThermoFisher.Foundation.IO.Range[])massRanges;                  
                     Console.WriteLine("{0}, {1}", x.First().Low, x.First().High);
+
+                    if (x.First().Low == 374.0 && x.First().High == 1751.0)
+                    {
+                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+                        isTakeOver = true;
+                        FullMS1Scan.PlaceMS1Scan(m_scans);
+                    }
                 }
             }
             catch { }
@@ -187,44 +214,26 @@ namespace MetaLive
             return false;
         }
 
-        private MzSpectrum TurnScan2Spectrum(IMsScan scan)
+        private MzSpectrumBU TurnScan2Spectrum(IMsScan scan)
         {
-            return new MzSpectrum(scan.Centroids.Select(p=>p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+            return new MzSpectrumBU(scan.Centroids.Select(p=>p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
         }
 
         private MzRange GetMzRange(IMsScan scan)
         {
-            return new MzRange(scan.Centroids.Min(p =>p.Mz), scan.Centroids.Max(p => p.Mz));
+            return new MzRange(scan.Centroids.First().Mz, scan.Centroids.Last().Mz);
         }
 
-
-
-        private void PlaceScan()
+        private double getPrecusorMass(IMsScan scan)
         {
-            // If no information about possible settings are available yet or if we finished our job, we bail out.
-            if ((m_scanId > 10) || (m_scans.PossibleParameters.Length == 0))
+            object a;
+            if (scan.CommonInformation.TryGetRawValue("Masses", out a))
             {
-                return;
+                var b = (double[])a;
+                Console.WriteLine("Current ms2 scan mass: {0}", b);
+                return b.First();
             }
-
-            foreach (var item in m_scans.PossibleParameters)
-            {
-                Console.WriteLine(item.Name + "----" + item.DefaultValue + "----" + item.Help + "----" + item.Selection);
-            }
-            ICustomScan scan = m_scans.CreateCustomScan();
-            scan.RunningNumber = m_scanId++;
-            scan.Values["Resolution"] = "15000.0";
-            scan.Values["IsolationRangeLow"] = "350";
-            scan.Values["IsolationRangeLow"] = "400";
-            scan.Values["FirstMass"] = "300";
-            scan.Values["LastMass"] = "1700";
-            scan.Values["NCE"] = "20";
-            foreach (var v in scan.Values)
-            {
-                Console.WriteLine(v);
-            }       
-            Console.WriteLine("{0:HH:mm:ss,fff} placing scan {1}", DateTime.Now, scan.RunningNumber);
-            m_scans.SetCustomScan(scan);
+            return 0;
         }
     }
 }
