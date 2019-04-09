@@ -45,20 +45,55 @@ namespace MetaLive
         bool isTakeOver = false;
         bool scanHasbeenPlaced = false;
 
+        static object locker = new object();
+
         internal DataReceiver()
         {
-            dataDependentScans = new Stack<DataDependentScan>();
+            dataDependentScans = new Queue<DataDependentScan>();
             DynamicExclusionList = new DynamicExclusionList();
         }
-        Stack<DataDependentScan> dataDependentScans { get; set; }
-        DynamicExclusionList DynamicExclusionList { get; set; }
+
+        Queue<DataDependentScan> dataDependentScans { get; set; }
+        static DynamicExclusionList DynamicExclusionList { get; set; }
+
+        static void ThreadExclusion() {
+            try
+            {
+                Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+            }
+        }
+
+        static void DynamicExclusionListDeqeue()
+        {
+            while (true)
+            {
+                Thread.Sleep(1000);
+
+                foreach (var item in DynamicExclusionList.exclusionList)
+                {
+                    if ((DateTime.Now - item.Item2).Milliseconds < 15000)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        lock (locker)
+                        {
+                            DynamicExclusionList.exclusionList.Dequeue();
+                        }
+                    }
+                }
+            }
+        }
 
         internal void DoJob(int timeInMicrosecond)
 		{
-            //TO DO: Maybe dangerous because the DynamicExclusionList.ExclusionList can be attended by two function at same time. Not sure about he thread here. 
-            System.Timers.Timer Timer = new System.Timers.Timer(interval: 15000);
-            Timer.AutoReset = true;
-            Timer.Enabled = true;
+            Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
+
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
                 using (m_scans = instrument.Control.GetScans(false))
@@ -70,11 +105,7 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
-                    Timer.Elapsed += DynamicExclusionList.exclustionListDynamicChange;
-
                     Thread.CurrentThread.Join(timeInMicrosecond);
-
-                    Timer.Elapsed -= DynamicExclusionList.exclustionListDynamicChange;
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
                     orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
@@ -100,8 +131,6 @@ namespace MetaLive
                     if (!IsMS1Scan(scan))
                     {
                         Console.WriteLine("MS2 Scan arrived.");
-                        //DynamicExclusionList.exclusionList.Enqueue(getPrecusorMass(scan));
-                        //Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
                     }
 
 
@@ -120,7 +149,7 @@ namespace MetaLive
                         {
                             if (topNMasses.Count > 10) //Select top 15 except those in exclusion list.
                             {
-                                break;
+                                continue;
                             }
                             if (DynamicExclusionList.isNotInExclusionList(iso.peaks.First().mz, 1.25))
                             {
@@ -134,33 +163,27 @@ namespace MetaLive
                         {
                             foreach (var mass in topNMasses)
                             {
-                                dataDependentScans.Push(new DataDependentScan(DateTime.Now, 15, m_scans, mass, 1.25));
-                                Console.WriteLine("dataDependentScans increased.");
-
-                                DynamicExclusionList.exclusionList.Enqueue(mass);
+                                lock (locker)
+                                {
+                                    dataDependentScans.Enqueue(new DataDependentScan(DateTime.Now, 15, m_scans, mass, 1.25));
+                                    Console.WriteLine("dataDependentScans increased.");
+                                }
+                                
+                                DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, DateTime>(mass, DateTime.Now));
                                 Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
                             }                        
                         }
-
-                        
-                        //while (dataDependentScans.Count > 0 && !scanHasbeenPlaced)
+                     
                         while (dataDependentScans.Count > 0)
                         {                           
-                            var x = dataDependentScans.Pop();
-                            //if (x.FinishTime > DateTime.Now)
+                            var x = dataDependentScans.Dequeue();
                             {
-                                x.PlaceMS2Scan();
-                                //scanHasbeenPlaced = true;
+                                x.PlaceMS2Scan();     
                             }
                         }
 
                         FullMS1Scan.PlaceMS1Scan(m_scans);
-                    }
-
-                    //if (!scanHasbeenPlaced)
-                    //{
-                    //    FullMS1Scan.PlaceMS1Scan(m_scans);
-                    //}
+                    } 
                 }
                 else
                 {

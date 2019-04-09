@@ -6,26 +6,20 @@ using System.Threading.Tasks;
 
 namespace MetaLive
 {
-    class DynamicExclusionList
+    public class DynamicExclusionList
     {
-        public Queue<double> exclusionList { get; set; }
+        public Queue<Tuple<double, DateTime>> exclusionList { get; set; }
 
         public DynamicExclusionList()
         {
-            exclusionList = new Queue<double>();
-        }
-
-        public void exclustionListDynamicChange(object o, System.Timers.ElapsedEventArgs e)
-        {
-            this.exclusionList.Dequeue();
-            Console.WriteLine("{0:HH:mm:ss,fff} ExclusionListDequeue.", DateTime.Now);
+            exclusionList = new Queue<Tuple<double, DateTime>>();
         }
 
         public bool isNotInExclusionList(double value, double range)
         {
             foreach (var iv in exclusionList)
             {
-                if (value - range <= iv && value + range >= iv)
+                if (value - range <= iv.Item1 && value + range >= iv.Item1)
                 {
 
                     Console.WriteLine("{0} Is In Exclusion List. Won't be place.", value);

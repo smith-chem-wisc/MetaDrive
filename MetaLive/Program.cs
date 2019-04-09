@@ -22,7 +22,6 @@ namespace MetaLive
             Loaders.LoadElements(ElementsLocation);
 
             //For Deconvolution, generate avagine model first.      
-            MzSpectrumBU.DoNeucodeModel = false;
             var test = new MzSpectrumBU(new double[]{ 1}, new double[] { 1 }, true);
 
 
