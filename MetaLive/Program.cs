@@ -32,7 +32,7 @@ namespace MetaLive
 
             Console.WriteLine("----------------------------");
             var dataReceiver = new DataReceiver();
-            dataReceiver.DoJob(3600000);
+            dataReceiver.DoJob(300000);
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
