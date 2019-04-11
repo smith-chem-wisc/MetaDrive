@@ -195,6 +195,8 @@ namespace MetaLive
                         }
 
                         FullMS1Scan.PlaceMS1Scan(m_scans);
+                        FullMS1Scan.PlaceMxmScan(m_scans);
+                        FullMS1Scan.PlaceMxmScan(m_scans);
                     } 
                 }
                 else

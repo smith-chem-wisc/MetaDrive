@@ -66,7 +66,6 @@ namespace MetaLive
             if (true)
             {
                 Console.WriteLine("CanAcceptNextCustomScan");
-                FullMS1Scan.PlaceMS1Scan(m_scans);
             }
         }
 
@@ -79,60 +78,29 @@ namespace MetaLive
 				scan.SpecificInformation.TryGetValue("Access Id:", out accessId);
 				Console.WriteLine("{0:HH:mm:ss,fff} scan {1} arrived", DateTime.Now, accessId);
 
-                //// The common part is shared by all Thermo Fisher instruments, these settings mainly form the so called filter string
-                //// which also appears on top of each spectrum in many visualizers.
+                ////// The common part is shared by all Thermo Fisher instruments, these settings mainly form the so called filter string
+                ////// which also appears on top of each spectrum in many visualizers.
                 //Console.WriteLine("----------------Common--------------");
                 //Dump("Common", scan.CommonInformation);
 
-                //// The specific part is individual for each instrument type. Many values are shared by different Exactive Series models.
+                ////// The specific part is individual for each instrument type. Many values are shared by different Exactive Series models.
                 //Console.WriteLine("----------------Specific--------------");
-                //Dump("Specific", scan.SpecificInformation);
+                // Dump("Specific", scan.SpecificInformation);
 
-                Dump(scan);
+                //Dump(scan);
                 //PlaceScan(888, 1.25);
-
+      
                 if (place10scan)
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        DataDependentScan DataDependentScan = new DataDependentScan(DateTime.Now, 15, m_scans, 888.888, 1.25);
-                        DataDependentScan.PlaceMS2Scan();
+                        FullMS1Scan.PlaceMxmScan(m_scans);
                     }
                     place10scan = false;
                 }
                 
             }
 		}
-
-        private void PlaceScan(double ms, double range)
-        {
-            // If no information about possible settings are available yet or if we finished our job, we bail out.
-            if ((m_scanId > 10) || (m_scans.PossibleParameters.Length == 0))
-            {
-                return;
-            }
-
-            foreach (var item in m_scans.PossibleParameters)
-            {
-                Console.WriteLine(item.Name + "----" + item.DefaultValue + "----" + item.Help + "----" + item.Selection);
-            }
-            ICustomScan scan = m_scans.CreateCustomScan();
-            scan.RunningNumber = m_scanId++;
-            scan.Values["Resolution"] = "15000.0";
-            scan.Values["IsolationRangeLow"] = (ms -range).ToString();
-            scan.Values["IsolationRangeHigh"] = (ms + range).ToString();
-            scan.Values["FirstMass"] = "100";
-            scan.Values["LastMass"] = "2000";
-            scan.Values["AGC_Target"] = "100000";
-            scan.Values["NCE"] = "30";
-            Console.WriteLine("--------------------------------");
-            foreach (var v in scan.Values)
-            {
-                Console.WriteLine(v);
-            }
-            Console.WriteLine("{0:HH:mm:ss,fff} placing scan {1}", DateTime.Now, scan.RunningNumber);
-            m_scans.SetCustomScan(scan);
-        }
 
         private void Dump(string title, IInfoContainer container)
         {

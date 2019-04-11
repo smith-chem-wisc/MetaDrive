@@ -26,13 +26,13 @@ namespace MetaLive
 
 
             //Console.WriteLine("----------------------------");
-            //new CustomScansTandemByArrival().DoJob(300000);
+            //new CustomScansTandemByArrival().DoJob(30000);
 
-            //Thread.CurrentThread.Join(60000);
-
+            
             Console.WriteLine("----------------------------");
             var dataReceiver = new DataReceiver();
             dataReceiver.DoJob(300000);
+           
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
