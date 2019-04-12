@@ -46,12 +46,14 @@ namespace MetaLive
 
         static object locker = new object();
 
-        internal DataReceiver()
+        internal DataReceiver(Parameters parameters)
         {
+            Parameters = parameters;
             dataDependentScans = new Queue<DataDependentScan>();
             DynamicExclusionList = new DynamicExclusionList();
         }
 
+        Parameters Parameters { get; set; }
         Queue<DataDependentScan> dataDependentScans { get; set; }
         static DynamicExclusionList DynamicExclusionList { get; set; }
 

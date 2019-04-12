@@ -1,0 +1,38 @@
+TestMod = false
+
+[GeneralSetting]
+TotalTimeInMinute = 1
+
+[BoxCarScanSetting]
+BoxCarScans = 2
+BoxCarBoxes = 12
+BoxCarOverlap = 1
+BoxCarMaxInjectTimeInMillisecond = 250
+BoxCarResolution = 120000
+BoxCarAgcTarget = 3000000
+BoxCarMzRangeLowBound = 400
+BoxCarMzRangeHighBound = 1200
+
+[FullScanSetting]
+MaxInjectTimeInMillisecond = 25
+Resolution = 60000
+AgcTarget = 3000000
+MzRangeLowBound = 300
+MzRangeHighBound = 1650
+
+[MS1IonSelecting]
+TopN = 10
+DynamicExclusion = true
+ExclusionDuration = 30
+IsolationWindow = 1
+NormCharge = 2
+MinCharge = 2
+MaxCharge = 5
+IntensityThreshold = 0
+
+[MS2ScanSetting]
+MS2MaxInjectTimeInMillisecond = 28
+MS2Resolution = 15000
+NCE = 27
+MS2AgcTarget = 100000
+MS2MzRangeLowBound = 100

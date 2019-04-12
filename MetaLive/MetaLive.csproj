@@ -94,6 +94,9 @@
     <Reference Include="MzML, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\MzML.dll</HintPath>
     </Reference>
+    <Reference Include="Nett, Version=0.11.0.0, Culture=neutral, PublicKeyToken=605dcfe7a1d3365b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nett.0.11.0\lib\Net40\Nett.dll</HintPath>
+    </Reference>
     <Reference Include="PepXML, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.394\lib\net471\PepXML.dll</HintPath>
     </Reference>
@@ -132,6 +135,7 @@
     <Compile Include="DynamicExclusionList.cs" />
     <Compile Include="FullMS1Scan.cs" />
     <Compile Include="MzSpectrumBU.cs" />
+    <Compile Include="Parameters.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -139,6 +143,9 @@
     <None Include="App.config" />
     <None Include="Data\elements.dat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\Parameters.toml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
   </ItemGroup>
