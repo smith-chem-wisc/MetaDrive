@@ -18,28 +18,32 @@ namespace MetaLive
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
+            //Initiate Element
             var DataDir = AppDomain.CurrentDomain.BaseDirectory;
             var ElementsLocation = Path.Combine(DataDir, @"Data", @"elements.dat");
             Loaders.LoadElements(ElementsLocation);
-
-            //For Deconvolution, generate avagine model first.      
+            //Loading avagine model for Deconvolution
             var test = new MzSpectrumBU(new double[]{ 1}, new double[] { 1 }, true);
 
-            //string path = args[0];
-            string defaultParameterPath = Path.Combine(DataDir, @"Data", @"Parameters.toml");
-            Parameters parameters = AddParametersFromFile(defaultParameterPath);
+            //Load parameters
+            string path="";
+            if (args.Count() > 0)
+            {
+                path = args[0];
+            }
+            Parameters parameters = AddParametersFromFile(path);
 
-
-            if (parameters.TestMod)
+            //Start the task
+            if (parameters.GeneralSetting.TestMod)
             {
                 Console.WriteLine("----------------------------");
-                new CustomScansTandemByArrival().DoJob(parameters.TotalTimeInMinute*60000);
+                new CustomScansTandemByArrival().DoJob(parameters.GeneralSetting.TotalTimeInMinute*60000);
             }
             else
             {
                 Console.WriteLine("----------------------------");
                 var dataReceiver = new DataReceiver(parameters);
-                dataReceiver.DoJob(parameters.TotalTimeInMinute * 60000);
+                dataReceiver.DoJob(parameters.GeneralSetting.TotalTimeInMinute * 60000);
             }
 
             Console.WriteLine("Press any key to continue...");
@@ -50,23 +54,25 @@ namespace MetaLive
         {
             Parameters parameters = new Parameters();
 
-            if (filePath == "")
-            {
-                return parameters;
-            }
-
+            var DataDir = AppDomain.CurrentDomain.BaseDirectory;
+            string defaultParameterPath = Path.Combine(DataDir, @"Data", @"Parameters.toml");           
             var filename = Path.GetFileName(filePath);
             var theExtension = Path.GetExtension(filename).ToLowerInvariant();
 
-            
-            if (theExtension != ".toml")
+            if (filePath == "" || theExtension != ".toml")
             {
-                return parameters;
+                filePath = defaultParameterPath;
             }
 
-            var tomlRead = Toml.ReadFile(filePath);
+            parameters = Toml.ReadFile<Parameters>(filePath);
+
+            var path = Path.GetDirectoryName(filePath);
+
+            //TO DO: If we want to write it in the future
+            //Toml.WriteFile(parameters, Path.Combine(path, @"test.toml"));
 
             return parameters;
         }
+
     }
 }

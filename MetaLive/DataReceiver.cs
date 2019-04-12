@@ -89,8 +89,6 @@ namespace MetaLive
             }
         }
 
-
-
         internal void DoJob(int timeInMicrosecond)
 		{       
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
@@ -156,33 +154,33 @@ namespace MetaLive
                         var IsotopicEnvelopes = spectrum.DeconvoluteBU(GetMzRange(scan), 2, 8, 5.0, 3);
                         Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
 
-                        List<double> topNMasses = new List<double>();
+                        List<double> topNMzs = new List<double>();
                         foreach (var iso in IsotopicEnvelopes)
                         {
-                            if (topNMasses.Count > 10) //Select top 15 except those in exclusion list.
+                            if (topNMzs.Count > 10) //Select top 15 except those in exclusion list.
                             {
                                 continue;
                             }
                             if (DynamicExclusionList.isNotInExclusionList(iso.peaks.First().mz, 1.25))
                             {
-                                topNMasses.Add(iso.peaks.First().mz);
+                                topNMzs.Add(iso.peaks.First().mz);
                             }
                         }
 
-                        Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute After Exclude {1}", DateTime.Now, topNMasses.Count);
+                        Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute After Exclude {1}", DateTime.Now, topNMzs.Count);
 
-                        if (topNMasses.Count() > 0)
+                        if (topNMzs.Count() > 0)
                         {
-                            foreach (var mass in topNMasses)
+                            foreach (var mz in topNMzs)
                             {
                                
-                                    dataDependentScans.Enqueue(new DataDependentScan(DateTime.Now, 15, m_scans, mass, 1.25));
+                                    dataDependentScans.Enqueue(new DataDependentScan(m_scans, mz));
                                     Console.WriteLine("dataDependentScans increased.");
 
                                 lock (locker)
                                 {
                                     var dataTime = DateTime.Now;
-                                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, DateTime>(mass, dataTime));
+                                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, DateTime>(mz, dataTime));
                                     Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
                                 }
                             }                        
@@ -192,13 +190,13 @@ namespace MetaLive
                         {                           
                             var x = dataDependentScans.Dequeue();
                             {
-                                x.PlaceMS2Scan();     
+                                x.PlaceMS2Scan(Parameters);     
                             }
                         }
 
-                        FullMS1Scan.PlaceMS1Scan(m_scans);
-                        FullMS1Scan.PlaceMxmScan(m_scans);
-                        FullMS1Scan.PlaceMxmScan(m_scans);
+                        FullMS1Scan.PlaceFullScan(m_scans, Parameters);
+                        FullMS1Scan.PlaceBoxCarScan(m_scans, Parameters);
+                        FullMS1Scan.PlaceBoxCarScan(m_scans, Parameters);
                     } 
                 }
                 else
@@ -233,7 +231,7 @@ namespace MetaLive
                     {
                         Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
                         isTakeOver = true;
-                        FullMS1Scan.PlaceMS1Scan(m_scans);
+                        FullMS1Scan.PlaceFullScan(m_scans, Parameters);
                     }
                 }
             }
