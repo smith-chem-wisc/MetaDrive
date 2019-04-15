@@ -30,6 +30,5 @@ namespace MetaLive
             Console.WriteLine("{0} Is Not In Exclusion List. Will be placed.", value);
             return true;
         }
-
     }
 }

@@ -15,6 +15,30 @@ namespace MetaLive
             {
                 return;
             }
+
+            ICustomScan scan = m_scans.CreateCustomScan();
+            scan.Values["Resolution"] = parameters.BoxCarScanSetting.BoxCarResolution.ToString();
+            scan.Values["FirstMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString();
+            scan.Values["LastMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString();
+            scan.Values["MaxIT"] = parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond.ToString();
+            scan.Values["NCE_NormCharge"] = parameters.BoxCarScanSetting.BoxCarNormCharge.ToString();
+            scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
+            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
+            {
+                scan.Values["MsxInjectRanges"] = parameters.BoxCarScanSetting.BoxCarMsxInjectRanges[i];
+
+                Console.WriteLine("{0:HH:mm:ss,fff} placing MS1 scan", DateTime.Now);
+                m_scans.SetCustomScan(scan);
+            }           
+        }
+
+        public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, string dynamicBoxRanges)
+        {
+            if (m_scans.PossibleParameters.Length == 0)
+            {
+                return;
+            }
+
             ICustomScan scan = m_scans.CreateCustomScan();
             scan.Values["Resolution"] = parameters.BoxCarScanSetting.BoxCarResolution.ToString();
             scan.Values["FirstMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString();
@@ -23,11 +47,11 @@ namespace MetaLive
             scan.Values["NCE_NormCharge"] = parameters.BoxCarScanSetting.BoxCarNormCharge.ToString();
             scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
 
-            scan.Values["MsxInjectRanges"] = "[(375,425),(475,525),(575,625),(675,725),(775,825)]";
-            scan.Values["MsxInjectMaxITs"] = "[50,50,50,50,50]";
+            scan.Values["MsxInjectRanges"] = dynamicBoxRanges;
 
             Console.WriteLine("{0:HH:mm:ss,fff} placing MS1 scan", DateTime.Now);
             m_scans.SetCustomScan(scan);
+
         }
     }
 }

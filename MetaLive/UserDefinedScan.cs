@@ -14,6 +14,7 @@ namespace MetaLive
         BoxCarScan
 
     }
+
     class UserDefinedScan
     {
         public UserDefinedScan(UserDefinedScanType userDefinedScanType)
@@ -21,8 +22,9 @@ namespace MetaLive
             UserDefinedScanType = userDefinedScanType;
         }
 
-        UserDefinedScanType UserDefinedScanType { get; set; }
+        public UserDefinedScanType UserDefinedScanType { get; }
         public double MZ { get; set; }
+        public string dynamicBox { get; set; }
 
     }
 }

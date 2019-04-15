@@ -48,7 +48,5 @@ namespace MetaLive
             Console.WriteLine("{0:HH:mm:ss,fff} placing data dependent ms2 scan {1}", DateTime.Now, xl);
             m_scans.SetCustomScan(scan);
         }
-
-
     }
 }

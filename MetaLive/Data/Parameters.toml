@@ -3,6 +3,8 @@ TestMod = false
 TotalTimeInMinute = 1
 
 [BoxCarScanSetting]
+BoxCar = false
+BoxDynamic = false
 BoxCarScans = 2
 BoxCarBoxes = 12
 BoxCarOverlap = 1
@@ -37,3 +39,4 @@ NCE = 27
 MS2AgcTarget = 100000
 MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800
+MS2MicroScan = 4

@@ -23,6 +23,8 @@ namespace MetaLive
 
     public class BoxCarScanSetting
     {
+        public bool BoxCar { get; set; }
+        public bool BoxDynamic { get; set; }
         public int BoxCarScans { get; set; }
         public int BoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
@@ -51,7 +53,7 @@ namespace MetaLive
                         {
                             lbox += (double)BoxCarOverlap / 2;
                         }
-                        msxInjectRanges[i] += lbox.ToString("0.00");
+                        msxInjectRanges[i] += lbox.ToString("0.0");
 
                         msxInjectRanges[i] += ",";
 
@@ -60,7 +62,7 @@ namespace MetaLive
                         {
                             rbox += (double)BoxCarOverlap / 2;
                         }
-                        msxInjectRanges[i] += rbox.ToString("0.00");
+                        msxInjectRanges[i] += rbox.ToString("0.0");
 
                         msxInjectRanges[i] += ")";
                         if (j != BoxCarBoxes - 1)
@@ -123,5 +125,6 @@ namespace MetaLive
         public int MS2AgcTarget { get; set; }
         public int MS2MzRangeLowBound { get; set; }
         public int MS2MzRangeHighBound { get; set; }
+        public int MS2MicroScan { get; set; }
     }
 }
