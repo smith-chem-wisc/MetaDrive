@@ -39,8 +39,11 @@ namespace MetaLive
 		int m_scanId = 1;   // must be != 0
 		IScans m_scans = null;
         bool place10scan = true;
-		internal CustomScansTandemByArrival() { }
-        
+		internal CustomScansTandemByArrival(Parameters parameters)
+        {
+            Parameters = parameters;
+        }
+        Parameters Parameters { get; set; }
 
         internal void DoJob(int time)
 		{
@@ -94,7 +97,7 @@ namespace MetaLive
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        FullMS1Scan.PlaceMxmScan(m_scans);
+                        BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
                     }
                     place10scan = false;
                 }

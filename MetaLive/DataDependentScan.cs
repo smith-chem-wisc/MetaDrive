@@ -10,18 +10,7 @@ namespace MetaLive
 {
     class DataDependentScan
     {
-        IScans m_scans = null;
-        
-
-        public DataDependentScan(IScans M_scans, double mz)
-        {
-            m_scans = M_scans;
-            MZ = mz;
-        }
-
-        public double MZ { get; }
-
-        public void PlaceMS2Scan(Parameters parameters)
+        public static void PlaceMS2Scan(IScans m_scans, Parameters parameters, double mz)
         {
             if (m_scans.PossibleParameters.Length == 0)
             {
@@ -29,8 +18,8 @@ namespace MetaLive
             }
 
             double Range = parameters.MS1IonSelecting.IsolationWindow;
-            string xl = (MZ - Range).ToString("0.00");
-            string xh = (MZ + Range).ToString("0.00");            
+            string xl = (mz - Range).ToString("0.00");
+            string xh = (mz + Range).ToString("0.00");            
             ICustomScan scan = m_scans.CreateCustomScan();
             scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
             scan.Values["NCE"] = parameters.MS2ScanSetting.NCE.ToString();

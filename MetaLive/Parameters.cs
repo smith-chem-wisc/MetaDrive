@@ -32,6 +32,66 @@ namespace MetaLive
         public int BoxCarNormCharge { get; set; }
         public int BoxCarMzRangeLowBound { get; set; }
         public int BoxCarMzRangeHighBound { get; set; }
+
+        public string[] BoxCarMsxInjectRanges
+        {
+            get
+            {
+                var msxInjectRanges = new string[BoxCarScans];
+                double x = ((double)BoxCarMzRangeHighBound - (double)BoxCarMzRangeLowBound) / BoxCarBoxes;
+                double y = x / BoxCarBoxes;
+                for (int i = 0; i < BoxCarScans; i++)
+                {
+                    msxInjectRanges[i] = "[";
+                    for (int j = 0; j < BoxCarBoxes; j++)
+                    {
+                        msxInjectRanges[i] += "(";
+                        var lbox = BoxCarMzRangeLowBound + x * j + y * i - (double)BoxCarOverlap / 2;
+                        if (j == 0)
+                        {
+                            lbox += (double)BoxCarOverlap / 2;
+                        }
+                        msxInjectRanges[i] += lbox.ToString("0.00");
+
+                        msxInjectRanges[i] += ",";
+
+                        var rbox = BoxCarMzRangeLowBound + x * j + y * i + y + (double)BoxCarOverlap / 2;
+                        if (j == 0)
+                        {
+                            rbox += (double)BoxCarOverlap / 2;
+                        }
+                        msxInjectRanges[i] += rbox.ToString("0.00");
+
+                        msxInjectRanges[i] += ")";
+                        if (j != BoxCarBoxes - 1)
+                        {
+                            msxInjectRanges[i] += ",";
+                        }
+                    }
+                    msxInjectRanges[i] += "]";
+                }
+
+                return msxInjectRanges;
+            }
+        }
+
+        public string BoxCarMsxInjectMaxITs
+        {
+            get
+            {
+                var msxInjectMaxITs = "[";
+                for (int i = 0; i < BoxCarBoxes; i++)
+                {
+                    msxInjectMaxITs += BoxCarAgcTarget / BoxCarBoxes;
+                    if (i != BoxCarBoxes - 1)
+                    {
+                        msxInjectMaxITs += ",";
+                    }
+                }
+                msxInjectMaxITs += "]";
+                return msxInjectMaxITs;
+            }
+        }
     }
 
     public class FullScanSetting

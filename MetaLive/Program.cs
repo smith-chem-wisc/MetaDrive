@@ -37,7 +37,7 @@ namespace MetaLive
             if (parameters.GeneralSetting.TestMod)
             {
                 Console.WriteLine("----------------------------");
-                new CustomScansTandemByArrival().DoJob(parameters.GeneralSetting.TotalTimeInMinute*60000);
+                new CustomScansTandemByArrival(parameters).DoJob(parameters.GeneralSetting.TotalTimeInMinute*60000);
             }
             else
             {
@@ -50,7 +50,7 @@ namespace MetaLive
             Console.ReadKey();
         }
 
-        static private Parameters AddParametersFromFile(string filePath)
+        static public Parameters AddParametersFromFile(string filePath)
         {
             Parameters parameters = new Parameters();
 
