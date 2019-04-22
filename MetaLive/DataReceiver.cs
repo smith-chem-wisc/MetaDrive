@@ -80,7 +80,6 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamOpening -= Orbitrap_AcquisitionStreamOpening;
                 }
             }
-
         }
 
 		private void Orbitrap_MsScanArrived(object sender, MsScanEventArgs e)
@@ -96,19 +95,12 @@ namespace MetaLive
                 if (isTakeOver)
                 {
                     //TO DO: will create too many thread?
-                    try
+                    Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
                     {
-                        Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
-                        {
-                            IsBackground = true
-                        };
-                        childThreadAddScan.Start();
-                        Console.WriteLine("Start Thread for Add Scan Into Queue!");
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("DynamicExclusionListDeqeue Exception!");
-                    }
+                        IsBackground = true
+                    };
+                    childThreadAddScan.Start();
+                    Console.WriteLine("Start Thread for Add Scan Into Queue!");
                 }
                 else
                 {
@@ -119,29 +111,18 @@ namespace MetaLive
 
         private void Orbitrap_AcquisitionStreamOpening(object sender, MsAcquisitionOpeningEventArgs e)
         {
-            try
-            {
-                Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
-                childThreadExclusionList.IsBackground = true;
-                childThreadExclusionList.Start();
-                Console.WriteLine("Start Thread for exclusion list!");
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
-            }
 
-            try
-            {
-                Thread childThreadPlaceScan = new Thread(PlaceScan);
-                childThreadPlaceScan.IsBackground = true;
-                childThreadPlaceScan.Start();
-                Console.WriteLine("Start Thread for Place Scan!");
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
-            }
+            Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
+            childThreadExclusionList.IsBackground = true;
+            childThreadExclusionList.Start();
+            Console.WriteLine("Start Thread for exclusion list!");
+
+
+            Thread childThreadPlaceScan = new Thread(PlaceScan);
+            childThreadPlaceScan.IsBackground = true;
+            childThreadPlaceScan.Start();
+            Console.WriteLine("Start Thread for Place Scan!");
+
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream opens (start of method)");
         }
@@ -178,153 +159,176 @@ namespace MetaLive
 
         private void DynamicExclusionListDeqeue()
         {
-            while (dynamicExclude)
+            try
             {
-                Thread.Sleep(Parameters.MS1IonSelecting.ExclusionDuration);
-
-                DateTime dateTime = DateTime.Now;
-
-                Console.WriteLine("Check the dynamic exclusionList.");
-
-                lock (lockerExclude)
+                while (dynamicExclude)
                 {
-                    for (int i = 0; i < DynamicExclusionList.exclusionList.Count; i++)
+                    Thread.Sleep(Parameters.MS1IonSelecting.ExclusionDuration);
+
+                    DateTime dateTime = DateTime.Now;
+
+                    Console.WriteLine("Check the dynamic exclusionList.");
+
+                    lock (lockerExclude)
                     {
-                        if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item2).TotalMilliseconds < 15000)
+                        for (int i = 0; i < DynamicExclusionList.exclusionList.Count; i++)
                         {
-                            Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}", dateTime, DynamicExclusionList.exclusionList.Peek().Item2);
-                            break;
-                        }
-                        else
-                        {
+                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < 15000)
+                            {
+                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}", dateTime, DynamicExclusionList.exclusionList.Peek().Item2);
+                                break;
+                            }
+                            else
+                            {
 
-                            DynamicExclusionList.exclusionList.Dequeue();
-                            Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicExclusionList.exclusionList.Count);
+                                DynamicExclusionList.exclusionList.Dequeue();
+                                Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicExclusionList.exclusionList.Count);
 
+                            }
                         }
+
                     }
-
                 }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
             }
         }
 
         private void PlaceScan()
         {
-            Thread.Sleep(300); //TO DO: How to control the Thread 
-
-            while (placeUserDefinedScan)
+            try
             {
-                lock (lockerScan)
+                Thread.Sleep(300); //TO DO: How to control the Thread 
+
+                while (placeUserDefinedScan)
                 {
-                    if (UserDefinedScans.Count > 0)
+                    lock (lockerScan)
                     {
-                        var x = UserDefinedScans.Dequeue();
+                        if (UserDefinedScans.Count > 0)
                         {
-                            switch (x.UserDefinedScanType)
+                            var x = UserDefinedScans.Dequeue();
                             {
-                                case UserDefinedScanType.FullScan:
-                                    FullScan.PlaceFullScan(m_scans, Parameters);
-                                    break;
-                                case UserDefinedScanType.DataDependentScan:
-                                    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.MZ);
-                                    break;
-                                case UserDefinedScanType.BoxCarScan:
-                                    if (Parameters.BoxCarScanSetting.BoxDynamic)
-                                    {
-                                        BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
-                                    }
-                                    else
-                                    {
-                                        BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
-                                    }
-                                    
-                                    break;
-                                default:
-                                    break;
+                                switch (x.UserDefinedScanType)
+                                {
+                                    case UserDefinedScanType.FullScan:
+                                        FullScan.PlaceFullScan(m_scans, Parameters);
+                                        break;
+                                    case UserDefinedScanType.DataDependentScan:
+                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.MZ);
+                                        break;
+                                    case UserDefinedScanType.BoxCarScan:
+                                        if (Parameters.BoxCarScanSetting.BoxDynamic)
+                                        {
+                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
+                                        }
+                                        else
+                                        {
+                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+
                             }
-                            
                         }
                     }
                 }
-            }        
+            }
+
+            catch (Exception)
+            {
+                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+            }
         }
+
 
         private void AddScanIntoQueue(IMsScan scan)
         {
-            //TO DO: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
-            if (!IsMS1Scan(scan))
+            try
             {
-                Console.WriteLine("MS2 Scan arrived.");
-            }
-
-            if (scan.HasCentroidInformation && IsMS1Scan(scan))
-            {
-                Console.WriteLine("MS1 Scan arrived. Deconvolute:");
-
-                var spectrum = TurnScan2Spectrum(scan);
-
-                var IsotopicEnvelopes = spectrum.DeconvoluteBU(GetMzRange(scan), 2, 8, 5.0, 3);
-                Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
-
-                string boxDynamic = "";
-                if (Parameters.BoxCarScanSetting.BoxDynamic)
+                //TO DO: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
+                if (!IsMS1Scan(scan))
                 {
-                    boxDynamic = BuildBoxDynamic();
+                    Console.WriteLine("MS2 Scan arrived.");
                 }
 
-                List<double> topNMzs = new List<double>();
-                foreach (var iso in IsotopicEnvelopes)
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    if (topNMzs.Count > Parameters.MS1IonSelecting.TopN)
-                    {
-                        continue;
-                    }
-                    lock (lockerExclude)
-                    {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.First().mz, 1.25))
-                        {
-                            topNMzs.Add(iso.peaks.First().mz);
-                        }
-                    }               
-                }
+                    Console.WriteLine("MS1 Scan arrived. Deconvolute:");
 
-                Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute After Exclude {1}", DateTime.Now, topNMzs.Count);
+                    var spectrum = TurnScan2Spectrum(scan);
 
-                if (topNMzs.Count() > 0)
-                {
-                    foreach (var mz in topNMzs)
+                    var IsotopicEnvelopes = spectrum.DeconvoluteBU(GetMzRange(scan), 2, 8, 5.0, 3);
+                    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
+
+                    if (IsotopicEnvelopes.Count() > 0)
                     {
-                        var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                        theScan.MZ = mz;
-                        lock (lockerScan)
+                        int topN = 0;
+                        foreach (var iso in IsotopicEnvelopes)
                         {
-                            UserDefinedScans.Enqueue(theScan);
-                            Console.WriteLine("dataDependentScans increased.");
-                        }                       
+                            if (topN >= Parameters.MS1IonSelecting.TopN)
+                            {
+                                continue;
+                            }
+                            lock (lockerExclude)
+                            {
+                                if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                                {
+                                    var dataTime = DateTime.Now;
+                                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
 
-                        lock (lockerExclude)
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, DateTime>(mz, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                                    var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                                    //TO DO: get the best Mz.
+                                    theScan.MZ = iso.monoisotopicMass/iso.charge;
+                                    lock (lockerScan)
+                                    {
+                                        UserDefinedScans.Enqueue(theScan);
+                                        Console.WriteLine("dataDependentScans increased.");
+                                    }
+                                    topN++;
+                                }
+                            }                  
                         }
                     }
-                }
-                lock (lockerScan)
-                {
-                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                    if (Parameters.BoxCarScanSetting.BoxCar)
-                    {
-                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                    }
+
+                    //TO THINK: Should I use charge here?
+                    //List<int> chargeEnvelopes = new List<int>();
+                    List<double> boxDynamic = new List<double>();
                     if (Parameters.BoxCarScanSetting.BoxDynamic)
                     {
-                        var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                        dynamicBoxCarScan.dynamicBox = boxDynamic;
-                        UserDefinedScans.Enqueue(dynamicBoxCarScan);
-                    }                    
-                }
+                        lock (lockerExclude)
+                        {
+                            foreach (var exc in DynamicExclusionList.exclusionList)
+                            {
+                                boxDynamic.Add(exc.Item1);
+                            }
+                        }
+                    }
 
+                    lock (lockerScan)
+                    {
+                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        if (Parameters.BoxCarScanSetting.BoxCar)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                        }
+                        if (Parameters.BoxCarScanSetting.BoxDynamic)
+                        {
+                            var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                            dynamicBoxCarScan.dynamicBox = boxDynamic;
+                            UserDefinedScans.Enqueue(dynamicBoxCarScan);
+                        }
+                    }
+
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
             }
         }
 
@@ -363,10 +367,5 @@ namespace MetaLive
             return 0;
         }
 
-        private string BuildBoxDynamic()
-        {
-
-            return "";
-        }
     }
 }

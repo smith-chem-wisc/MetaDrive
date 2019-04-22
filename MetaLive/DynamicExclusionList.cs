@@ -9,11 +9,12 @@ namespace MetaLive
 {
     public class DynamicExclusionList
     {
-        public Queue<Tuple<double, DateTime>> exclusionList { get; set; }
+        //Tuple<Mass, charge, time>
+        public Queue<Tuple<double, int, DateTime>> exclusionList { get; set; }
 
         public DynamicExclusionList()
         {
-            exclusionList = new Queue<Tuple<double, DateTime>>();
+            exclusionList = new Queue<Tuple<double, int, DateTime>>();
         }
 
         public bool isNotInExclusionList(double value, double range)

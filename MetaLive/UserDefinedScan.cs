@@ -24,7 +24,7 @@ namespace MetaLive
 
         public UserDefinedScanType UserDefinedScanType { get; }
         public double MZ { get; set; }
-        public string dynamicBox { get; set; }
+        public List<double> dynamicBox { get; set; }
 
     }
 }
