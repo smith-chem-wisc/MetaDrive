@@ -23,7 +23,7 @@ namespace MetaLive
         }
 
         public UserDefinedScanType UserDefinedScanType { get; }
-        public double MZ { get; set; }
+        public List<Tuple<double, int>> Mass_Charges{get; set;}
         public List<double> dynamicBox { get; set; }
 
     }

@@ -32,7 +32,7 @@ using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 
 using MassSpectrometry;
 using MzLibUtil;
-
+using Chemistry;
 
 namespace MetaLive
 {
@@ -216,7 +216,7 @@ namespace MetaLive
                                         FullScan.PlaceFullScan(m_scans, Parameters);
                                         break;
                                     case UserDefinedScanType.DataDependentScan:
-                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.MZ);
+                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mass_Charges.First());
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
                                         if (Parameters.BoxCarScanSetting.BoxDynamic)
@@ -283,7 +283,7 @@ namespace MetaLive
 
                                     var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
                                     //TO DO: get the best Mz.
-                                    theScan.MZ = iso.monoisotopicMass/iso.charge;
+                                    theScan.Mass_Charges = new List<Tuple<double, int>> { new Tuple<double, int>(iso.monoisotopicMass, iso.charge)};
                                     lock (lockerScan)
                                     {
                                         UserDefinedScans.Enqueue(theScan);
@@ -297,33 +297,35 @@ namespace MetaLive
 
                     //TO THINK: Should I use charge here?
                     //List<int> chargeEnvelopes = new List<int>();
-                    List<double> boxDynamic = new List<double>();
-                    if (Parameters.BoxCarScanSetting.BoxDynamic)
+                    if (!IsBoxCarScan(scan))
                     {
-                        lock (lockerExclude)
+                        List<double> boxDynamic = new List<double>();
+                        if (Parameters.BoxCarScanSetting.BoxDynamic)
                         {
-                            foreach (var exc in DynamicExclusionList.exclusionList)
+                            lock (lockerExclude)
                             {
-                                boxDynamic.Add(exc.Item1);
+                                foreach (var exc in DynamicExclusionList.exclusionList)
+                                {
+                                    boxDynamic.Add(exc.Item1);
+                                }
+                            }
+                        }
+
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            if (Parameters.BoxCarScanSetting.BoxCar)
+                            {
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                            }
+                            if (Parameters.BoxCarScanSetting.BoxDynamic)
+                            {
+                                var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                dynamicBoxCarScan.dynamicBox = boxDynamic;
+                                UserDefinedScans.Enqueue(dynamicBoxCarScan);
                             }
                         }
                     }
-
-                    lock (lockerScan)
-                    {
-                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                        if (Parameters.BoxCarScanSetting.BoxCar)
-                        {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                        }
-                        if (Parameters.BoxCarScanSetting.BoxDynamic)
-                        {
-                            var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                            dynamicBoxCarScan.dynamicBox = boxDynamic;
-                            UserDefinedScans.Enqueue(dynamicBoxCarScan);
-                        }
-                    }
-
                 }
             }
             catch (Exception)
@@ -338,6 +340,20 @@ namespace MetaLive
             if (scan.CommonInformation.TryGetValue("MSOrder", out value))
             {
                 if (value == "MS")
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool IsBoxCarScan(IMsScan scan)
+        {
+            //TO DO: better way to check if is boxcar scan.
+            string value;
+            if (scan.CommonInformation.TryGetValue("LowMass", out value))
+            {
+                if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.0"))
                 {
                     return true;
                 }

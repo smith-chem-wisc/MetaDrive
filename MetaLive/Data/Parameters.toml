@@ -13,7 +13,7 @@ BoxCarResolution = 120000
 BoxCarAgcTarget = 3000000
 BoxCarNormCharge = 2
 BoxCarMzRangeLowBound = 400
-BoxCarMzRangeHighBound = 1200
+BoxCarMzRangeHighBound = 1600
 
 [FullScanSetting]
 MaxInjectTimeInMillisecond = 25

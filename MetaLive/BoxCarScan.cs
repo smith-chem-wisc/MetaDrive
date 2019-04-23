@@ -77,26 +77,26 @@ namespace MetaLive
                 if (i == 0)
                 {
                     dynamicBoxRanges += "(";
-                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.00");
+                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.000");
                     dynamicBoxRanges += ",";
-                    dynamicBoxRanges += (mz - 5).ToString("0.00");
+                    dynamicBoxRanges += (mz - 2.5).ToString("0.000");
                     dynamicBoxRanges += "),";
                 }
                 else if (i == mzsFiltered.Count - 1)
                 {
                     dynamicBoxRanges += "(";              
-                    dynamicBoxRanges += (mz + 5).ToString("0.00");
+                    dynamicBoxRanges += (mz + 2.5).ToString("0.000");
                     dynamicBoxRanges += ",";
-                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.00");
+                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.000");
                     dynamicBoxRanges += ")";
                 }
                 else
                 {
                     var mz_front = mzsFiltered[i-1];
                     dynamicBoxRanges += "(";
-                    dynamicBoxRanges += (mz_front + 5).ToString("0.00");
+                    dynamicBoxRanges += (mz_front + 5).ToString("0.000");
                     dynamicBoxRanges += ",";
-                    dynamicBoxRanges += (mz + 5).ToString("0.00");
+                    dynamicBoxRanges += (mz + 5).ToString("0.000");
                     dynamicBoxRanges += "),";
                 }   
 
