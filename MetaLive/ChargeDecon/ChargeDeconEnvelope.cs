@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MassSpectrometry;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
+using MetaDrawGUI;
 
 namespace MetaLive
 {
