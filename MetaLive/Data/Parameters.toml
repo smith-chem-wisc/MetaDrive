@@ -29,7 +29,7 @@ ExclusionDuration = 30
 IsolationWindow = 1.25
 NormCharge = 2
 MinCharge = 2
-MaxCharge = 5
+MaxCharge = 6
 IntensityThreshold = 0
 
 [MS2ScanSetting]

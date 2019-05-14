@@ -94,13 +94,21 @@ namespace MetaLive
 
                 if (isTakeOver)
                 {
-                    //TO DO: will create too many thread?
-                    Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
+                    //TO DO: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
+                    if (!IsMS1Scan(scan))
                     {
-                        IsBackground = true
-                    };
-                    childThreadAddScan.Start();
-                    Console.WriteLine("Start Thread for Add Scan Into Queue!");
+                        Console.WriteLine("MS2 Scan arrived.");
+                    }
+                    else
+                    {
+                        //TO DO: will create too many thread?
+                        Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
+                        {
+                            IsBackground = true
+                        };
+                        childThreadAddScan.Start();
+                        Console.WriteLine("Start Thread for Add Scan Into Queue!");
+                    }
                 }
                 else
                 {
@@ -204,7 +212,7 @@ namespace MetaLive
                 //TO DO: should I use spining or blocking
                 while (placeUserDefinedScan)
                 {
-                    Thread.Sleep(300); //TO DO: How to control the Thread
+                    Thread.Sleep(30); //TO DO: How to control the Thread
 
                     lock (lockerScan)
                     {
@@ -251,12 +259,6 @@ namespace MetaLive
         {
             try
             {
-                //TO DO: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
-                if (!IsMS1Scan(scan))
-                {
-                    Console.WriteLine("MS2 Scan arrived.");
-                }
-
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
                     Console.WriteLine("MS1 Scan arrived. Deconvolute:");
@@ -264,7 +266,6 @@ namespace MetaLive
                     var spectrum = TurnScan2Spectrum(scan);
 
                     DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-
                     var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter);
                     Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -275,7 +276,7 @@ namespace MetaLive
                         {
                             if (topN >= Parameters.MS1IonSelecting.TopN)
                             {
-                                continue;
+                                break;
                             }
                             lock (lockerExclude)
                             {

@@ -19,9 +19,9 @@ namespace MetaLive
         public int DeconvolutionMinAssumedChargeState { get;  set; }
         public int DeconvolutionMaxAssumedChargeState { get;  set; }
         public Tolerance DeconvolutionMassTolerance { get;  set; }
-        public bool CheckNeuCode { get;  set; }
 
         //NeuCode
+        public bool CheckNeuCode { get; set; }
         public double NeuCodeMassDefect { get; set; }
         public int MaxmiumNeuCodeNumber { get; set; }
 
