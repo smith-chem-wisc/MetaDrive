@@ -266,7 +266,7 @@ namespace MetaLive
                     var spectrum = TurnScan2Spectrum(scan);
 
                     DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter);
+                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p=>p.totalIntensity).ToArray();
                     Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
 
                     if (IsotopicEnvelopes.Count() > 0)
