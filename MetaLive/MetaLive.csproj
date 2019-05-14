@@ -133,16 +133,25 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoxCarScan.cs" />
+    <Compile Include="ChargeDecon\ChargeDeconEnvelope.cs" />
+    <Compile Include="ChargeDecon\ChargeDeconPerMS1Scan.cs" />
+    <Compile Include="ChargeDecon\ChargeParsi.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="CustomScansTandemByArrival.cs" />
     <Compile Include="DataDependentScan.cs" />
     <Compile Include="DataReceiver.cs" />
+    <Compile Include="Deconvolution\DeconvolutionParameter.cs" />
     <Compile Include="DynamicExclusionList.cs" />
     <Compile Include="FullScan.cs" />
-    <Compile Include="MzSpectrumBU.cs" />
+    <Compile Include="MassAcceptor\AllowedIntervalWithNotch.cs" />
+    <Compile Include="MassAcceptor\MassDiffAcceptor.cs" />
+    <Compile Include="Deconvolution\MzSpectrumBU.cs" />
+    <Compile Include="Deconvolution\NeuCodeIsotopicEnvelop.cs" />
     <Compile Include="Parameters.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="MassAcceptor\SingleAbsoluteAroundZeroMassDiffAcceptor.cs" />
+    <Compile Include="MassAcceptor\SinglePpmAroundZeroMassDiffAcceptor.cs" />
     <Compile Include="UnitTest.cs" />
     <Compile Include="UserDefinedScan.cs" />
   </ItemGroup>

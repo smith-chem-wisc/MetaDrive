@@ -161,9 +161,10 @@ namespace MetaLive
         {
             try
             {
+                //TO DO: should I use spining or blocking
                 while (dynamicExclude)
                 {
-                    Thread.Sleep(Parameters.MS1IonSelecting.ExclusionDuration);
+                    Thread.Sleep(300);
 
                     DateTime dateTime = DateTime.Now;
 
@@ -173,7 +174,7 @@ namespace MetaLive
                     {
                         for (int i = 0; i < DynamicExclusionList.exclusionList.Count; i++)
                         {
-                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < 15000)
+                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration)
                             {
                                 Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}", dateTime, DynamicExclusionList.exclusionList.Peek().Item2);
                                 break;
@@ -200,10 +201,11 @@ namespace MetaLive
         {
             try
             {
-                Thread.Sleep(300); //TO DO: How to control the Thread 
-
+                //TO DO: should I use spining or blocking
                 while (placeUserDefinedScan)
                 {
+                    Thread.Sleep(300); //TO DO: How to control the Thread
+
                     lock (lockerScan)
                     {
                         if (UserDefinedScans.Count > 0)
