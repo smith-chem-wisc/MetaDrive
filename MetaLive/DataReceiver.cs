@@ -22,6 +22,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using Thermo.Interfaces.ExactiveAccess_V1;
@@ -54,6 +55,17 @@ namespace MetaLive
             Parameters = parameters;
             UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
+
+            Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
+            childThreadExclusionList.IsBackground = true;
+            childThreadExclusionList.Start();
+            Console.WriteLine("Start Thread for exclusion list!");
+
+
+            Thread childThreadPlaceScan = new Thread(PlaceScan);
+            childThreadPlaceScan.IsBackground = true;
+            childThreadPlaceScan.Start();
+            Console.WriteLine("Start Thread for Place Scan!");
         }
 
         Parameters Parameters { get; set; }
@@ -101,13 +113,22 @@ namespace MetaLive
                     }
                     else
                     {
+                        //TestThread(scan);
+                        Console.WriteLine("MS1 Scan arrived.");
+                        AddScanIntoQueue(scan);
+
+                        //Task.Run(() => AddScanIntoQueue(scan)); //Task.Run doesn't work for some reason.
+                        //Task.Run(() => TestThread(scan));
+
+                        //ThreadPool.QueueUserWorkItem(new WaitCallback(TestThread), scan);
+
                         //TO DO: will create too many thread?
-                        Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
-                        {
-                            IsBackground = true
-                        };
-                        childThreadAddScan.Start();
-                        Console.WriteLine("Start Thread for Add Scan Into Queue!");
+                        //Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
+                        //{
+                        //    IsBackground = true
+                        //};
+                        //childThreadAddScan.Start();
+                        //Console.WriteLine("Start Thread for Add Scan Into Queue!");
                     }
                 }
                 else
@@ -119,19 +140,6 @@ namespace MetaLive
 
         private void Orbitrap_AcquisitionStreamOpening(object sender, MsAcquisitionOpeningEventArgs e)
         {
-
-            Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
-            childThreadExclusionList.IsBackground = true;
-            childThreadExclusionList.Start();
-            Console.WriteLine("Start Thread for exclusion list!");
-
-
-            Thread childThreadPlaceScan = new Thread(PlaceScan);
-            childThreadPlaceScan.IsBackground = true;
-            childThreadPlaceScan.Start();
-            Console.WriteLine("Start Thread for Place Scan!");
-
-
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream opens (start of method)");
         }
 
@@ -182,7 +190,7 @@ namespace MetaLive
                     {
                         for (int i = 0; i < DynamicExclusionList.exclusionList.Count; i++)
                         {
-                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration)
+                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).Seconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
                             {
                                 Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}", dateTime, DynamicExclusionList.exclusionList.Peek().Item2);
                                 break;
@@ -213,6 +221,8 @@ namespace MetaLive
                 while (placeUserDefinedScan)
                 {
                     Thread.Sleep(30); //TO DO: How to control the Thread
+
+                    Console.WriteLine("Check the UserDefinedScans.");
 
                     lock (lockerScan)
                     {
@@ -250,10 +260,22 @@ namespace MetaLive
 
             catch (Exception)
             {
-                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+                Console.WriteLine("PlaceScan Exception!");
             }
         }
 
+        private void TestThread(object a)
+        {
+            try
+            {
+                IMsScan scan = a as IMsScan;
+                var x = scan.CentroidCount;
+                Console.WriteLine("Task works.");
+            }
+            catch(Exception){
+                Console.WriteLine("Task fails.");
+            }
+        }
 
         private void AddScanIntoQueue(IMsScan scan)
         {
@@ -335,7 +357,7 @@ namespace MetaLive
             }
             catch (Exception)
             {
-                Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+                Console.WriteLine("AddScanIntoQueue Exception!");
             }
         }
 

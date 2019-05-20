@@ -24,7 +24,7 @@ namespace MetaLive
             scan.Values["NCE_NormCharge"] = parameters.MS1IonSelecting.NormCharge.ToString();
             scan.Values["AGC_Target"] = parameters.FullScanSetting.AgcTarget.ToString();   
 
-            Console.WriteLine("{0:HH:mm:ss,fff} placing MS1 scan", DateTime.Now);
+            Console.WriteLine("{0:HH:mm:ss,fff} placing Full MS1 scan", DateTime.Now);
             m_scans.SetCustomScan(scan);
         }
     }

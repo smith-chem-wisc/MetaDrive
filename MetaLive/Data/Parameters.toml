@@ -1,6 +1,6 @@
 [GeneralSetting]
 TestMod = false
-TotalTimeInMinute = 1
+TotalTimeInMinute = 5
 
 [BoxCarScanSetting]
 BoxCar = false

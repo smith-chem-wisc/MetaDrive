@@ -28,7 +28,7 @@ namespace MetaLive
             {
                 scan.Values["MsxInjectRanges"] = parameters.BoxCarScanSetting.BoxCarMsxInjectRanges[i];
 
-                Console.WriteLine("{0:HH:mm:ss,fff} placing MS1 scan", DateTime.Now);
+                Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
                 m_scans.SetCustomScan(scan);
             }           
         }
@@ -52,7 +52,7 @@ namespace MetaLive
 
             scan.Values["MsxInjectRanges"] = BuildDynamicBoxString(parameters, dynamicBox);
 
-            Console.WriteLine("{0:HH:mm:ss,fff} placing MS1 scan", DateTime.Now);
+            Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
             m_scans.SetCustomScan(scan);
 
         }
