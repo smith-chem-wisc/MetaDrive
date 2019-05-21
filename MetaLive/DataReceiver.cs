@@ -112,18 +112,15 @@ namespace MetaLive
                     if (!IsMS1Scan(scan))
                     {
                         Console.WriteLine("MS2 Scan arrived.");
-                        lock (lockerScan)
-                        {
-                            //Add Full MS1 scan or regular Boxcar scans when the UserDefinedScans is empty.
-                            if (UserDefinedScans.Count==0)
-                            {                             
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                                if (Parameters.BoxCarScanSetting.BoxCar && !Parameters.BoxCarScanSetting.BoxDynamic)
-                                {
-                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                                }
-                            }
-                        }
+                        //string value;
+                        //if (scan.CommonInformation.TryGetValue("FirstPrecursorMasses", out value) && value)
+                        //{
+                        //    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        //    if (Parameters.BoxCarScanSetting.BoxCar && !Parameters.BoxCarScanSetting.BoxDynamic)
+                        //    {
+                        //        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                        //    }
+                        //}
                     }
                     else
                     {
@@ -198,7 +195,7 @@ namespace MetaLive
 
                     DateTime dateTime = DateTime.Now;
 
-                    Console.WriteLine("Check the dynamic exclusionList.");
+                    //Console.WriteLine("Check the dynamic exclusionList.");
 
                     lock (lockerExclude)
                     {
@@ -236,7 +233,7 @@ namespace MetaLive
                 {
                     Thread.Sleep(30); //TO DO: How to control the Thread
 
-                    Console.WriteLine("Check the UserDefinedScans.");
+                    //Console.WriteLine("Check the UserDefinedScans.");
 
                     lock (lockerScan)
                     {
@@ -296,63 +293,39 @@ namespace MetaLive
         private void AddScanIntoQueue(IMsScan scan)
         {
             try
-            {
+            {   
+                //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    Console.WriteLine("MS1 Scan arrived. Deconvolute:");
+                    var isBoxCarScan = IsBoxCarScan(scan);
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 {0} Scan {1} arrived. Deconvolute.", isBoxCarScan, scanNumber);
 
-                    var spectrum = TurnScan2Spectrum(scan);
-
-                    DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p=>p.totalIntensity).ToArray(); //Ordered by intensity
-                    Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
-
-                    if (IsotopicEnvelopes.Count() > 0)
+                    var addMS2Scans = DeconvoluteAndAddIn(scan);
+           
+                    if (Parameters.BoxCarScanSetting.BoxDynamic)
                     {
-                        int topN = 0;
-                        foreach (var iso in IsotopicEnvelopes)
+                        if (addMS2Scans)
                         {
-                            if (topN >= Parameters.MS1IonSelecting.TopN)
+                            if (IsBoxCarScan(scan))
                             {
-                                break;
-                            }
-                            lock (lockerExclude)
-                            {
-                                if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                                lock (lockerScan)
                                 {
-                                    var dataTime = DateTime.Now;
-                                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
-                                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);                                 
-
-                                    var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                                    //TO DO: get the best Mz.
-                                    theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
-                                    lock (lockerScan)
-                                    {
-                                        UserDefinedScans.Enqueue(theScan);
-                                        Console.WriteLine("dataDependentScans increased.");
-                                    }
-                                    topN++;
+                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                                 }
-                            }                  
-                        }
-
-                        //Add Dynamic BoxCar Scan After add MS2 scan.
-                        if (Parameters.BoxCarScanSetting.BoxDynamic)
-                        {
-                            BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
-                            var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                            dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently   
-                            lock (lockerScan)
+                            }
+                            else
                             {
-                                UserDefinedScans.Enqueue(dynamicBoxCarScan);
+                                var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently   
+                                lock (lockerScan)
+                                {
+                                    UserDefinedScans.Enqueue(dynamicBoxCarScan);
+                                }
                             }
                         }
-                    }
-                    else 
-                    {
-                        //If the arrived scan is dynamic boxcar scan and got no isotopeEnvelops, a full MS1 scan need to be added.
-                        if (Parameters.BoxCarScanSetting.BoxDynamic && IsBoxCarScan(scan))
+                        else
                         {
                             lock (lockerScan)
                             {
@@ -366,6 +339,57 @@ namespace MetaLive
             {
                 Console.WriteLine("AddScanIntoQueue Exception!");
             }
+        }
+
+        private bool DeconvoluteAndAddIn(IMsScan scan)
+        {
+            var spectrum = TurnScan2Spectrum(scan);
+
+            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
+            var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p => p.totalIntensity).ToArray(); //Ordered by intensity
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
+
+            if (IsotopicEnvelopes.Count() > 0)
+            {
+                if (!IsBoxCarScan(scan))
+                {
+                    BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
+                }
+                
+                int topN = 0;
+                foreach (var iso in IsotopicEnvelopes)
+                {
+                    if (topN >= Parameters.MS1IonSelecting.TopN)
+                    {
+                        break;
+                    }
+                    lock (lockerExclude)
+                    {
+                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                        {
+                            var dataTime = DateTime.Now;
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                            //TO DO: get the best Mz.
+                            theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(theScan);
+                                Console.WriteLine("dataDependentScans increased.");
+                            }
+                            topN++;
+                        }
+                    }
+                }
+                if (topN > 0)
+                {
+                    return true;
+                }
+                return false;
+            }
+            return false;
         }
 
         private bool IsMS1Scan(IMsScan scan)
@@ -386,8 +410,9 @@ namespace MetaLive
             //TO DO: better way to check if is boxcar scan.
             string value;
             if (scan.CommonInformation.TryGetValue("LowMass", out value))
-            {
-                if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.0"))
+            {   
+                Console.WriteLine("IsBoxCarScan: " + value + "," + Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString());
+                if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString())
                 {
                     return true;
                 }

@@ -4,7 +4,7 @@ TotalTimeInMinute = 5
 
 [BoxCarScanSetting]
 BoxCar = true
-BoxDynamic = false
+BoxDynamic = true
 BoxCarScans = 2
 BoxCarBoxes = 12
 BoxCarOverlap = 1
