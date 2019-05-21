@@ -20,6 +20,8 @@ namespace MetaLive
         public UserDefinedScan(UserDefinedScanType userDefinedScanType)
         {
             UserDefinedScanType = userDefinedScanType;
+            Mass_Charges = new List<Tuple<double, int>>();
+            dynamicBox = new List<double>();
         }
 
         public UserDefinedScanType UserDefinedScanType { get; }

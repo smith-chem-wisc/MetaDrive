@@ -63,8 +63,7 @@ namespace MetaLive
             List<double> mzs = new List<double>();
             foreach (var range in dynamicBox)
             {
-
-                for (int i = 0; i < 60; i++)
+                for (int i = 1; i < 60; i++)
                 {
                     mzs.Add(range.ToMz(i));
                 }

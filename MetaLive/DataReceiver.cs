@@ -55,6 +55,7 @@ namespace MetaLive
             Parameters = parameters;
             UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
+            BoxDynamic = new Queue<double>();
 
             Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
             childThreadExclusionList.IsBackground = true;
@@ -71,6 +72,7 @@ namespace MetaLive
         Parameters Parameters { get; set; }
         Queue<UserDefinedScan> UserDefinedScans { get; set; }
         DynamicExclusionList DynamicExclusionList { get; set; }
+        Queue<double> BoxDynamic { get; set; }
 
         internal void DoJob(int timeInMicrosecond)
 		{       
@@ -288,11 +290,16 @@ namespace MetaLive
                     var spectrum = TurnScan2Spectrum(scan);
 
                     DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p=>p.totalIntensity).ToArray();
+                    var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p=>p.totalIntensity).ToArray(); //Ordered by intensity
                     Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
 
                     if (IsotopicEnvelopes.Count() > 0)
                     {
+                        if (Parameters.BoxCarScanSetting.BoxDynamic)
+                        {
+                            BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
+                        }
+
                         int topN = 0;
                         foreach (var iso in IsotopicEnvelopes)
                         {
@@ -306,11 +313,11 @@ namespace MetaLive
                                 {
                                     var dataTime = DateTime.Now;
                                     DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
-                                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);                                 
 
                                     var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
                                     //TO DO: get the best Mz.
-                                    theScan.Mass_Charges = new List<Tuple<double, int>> { new Tuple<double, int>(iso.monoisotopicMass, iso.charge)};
+                                    theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
                                     lock (lockerScan)
                                     {
                                         UserDefinedScans.Enqueue(theScan);
@@ -322,22 +329,8 @@ namespace MetaLive
                         }
                     }
 
-                    //TO THINK: Should I use charge here?
-                    //List<int> chargeEnvelopes = new List<int>();
                     if (!IsBoxCarScan(scan))
-                    {
-                        List<double> boxDynamic = new List<double>();
-                        if (Parameters.BoxCarScanSetting.BoxDynamic)
-                        {
-                            lock (lockerExclude)
-                            {
-                                foreach (var exc in DynamicExclusionList.exclusionList)
-                                {
-                                    boxDynamic.Add(exc.Item1);
-                                }
-                            }
-                        }
-
+                    {                       
                         lock (lockerScan)
                         {
                             UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
@@ -348,7 +341,7 @@ namespace MetaLive
                             if (Parameters.BoxCarScanSetting.BoxDynamic)
                             {
                                 var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                dynamicBoxCarScan.dynamicBox = boxDynamic;
+                                dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently                              
                                 UserDefinedScans.Enqueue(dynamicBoxCarScan);
                             }
                         }

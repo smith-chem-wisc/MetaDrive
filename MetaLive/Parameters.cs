@@ -41,7 +41,7 @@ namespace MetaLive
             {
                 var msxInjectRanges = new string[BoxCarScans];
                 double x = ((double)BoxCarMzRangeHighBound - (double)BoxCarMzRangeLowBound) / BoxCarBoxes;
-                double y = x / BoxCarBoxes;
+                double y = x / BoxCarScans;
                 for (int i = 0; i < BoxCarScans; i++)
                 {
                     msxInjectRanges[i] = "[";
