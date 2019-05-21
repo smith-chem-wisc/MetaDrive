@@ -349,13 +349,13 @@ namespace MetaLive
                             }
                         }
                     }
-                    else //If the arrived scan is dynamic boxcar scan and got no isotopeEnvelops, a full MS1 scan need to be added.
+                    else 
                     {
+                        //If the arrived scan is dynamic boxcar scan and got no isotopeEnvelops, a full MS1 scan need to be added.
                         if (Parameters.BoxCarScanSetting.BoxDynamic && IsBoxCarScan(scan))
                         {
                             lock (lockerScan)
                             {
-
                                 UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                             }
                         }

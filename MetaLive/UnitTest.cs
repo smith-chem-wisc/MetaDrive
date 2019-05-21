@@ -24,7 +24,7 @@ namespace MetaLive
             var Parameters = Program.AddParametersFromFile("");
             List<double> masses = new List<double> { 1500 };
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses);
-            Assert.AreEqual(test, "[(400.000,498.507),(506.007,756.007),(1503.507,1600.000)]");
+            Assert.AreEqual(test, "[(400.000,496.007),(506.007,746.007),(756.007,1496.007),(1506.007,1600.000)]");
         }
 
         [Test]

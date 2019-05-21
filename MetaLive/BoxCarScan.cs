@@ -49,10 +49,10 @@ namespace MetaLive
             scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
 
             
+            var dynamicBoxString = BuildDynamicBoxString(parameters, dynamicBox);
+            scan.Values["MsxInjectRanges"] = dynamicBoxString;
 
-            scan.Values["MsxInjectRanges"] = BuildDynamicBoxString(parameters, dynamicBox);
-
-            Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
+            Console.WriteLine("{0:HH:mm:ss,fff} placing Dynamic BoxCar MS1 scan {1}", DateTime.Now, dynamicBoxString);
             m_scans.SetCustomScan(scan);
 
         }
@@ -68,41 +68,41 @@ namespace MetaLive
                     mzs.Add(range.ToMz(i));
                 }
             }
+
             var mzsFiltered = mzs.Where(p => p > parameters.BoxCarScanSetting.BoxCarMzRangeLowBound && p < parameters.BoxCarScanSetting.BoxCarMzRangeHighBound).OrderBy(p => p).ToList();
 
-            for (int i = 0; i < mzsFiltered.Count; i++)
+            dynamicBoxRanges += "(";
+            dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.000");
+            dynamicBoxRanges += ",";
+            if (mzsFiltered[0] - 5 < parameters.BoxCarScanSetting.BoxCarMzRangeLowBound)
+            {
+                dynamicBoxRanges += (mzsFiltered[0]).ToString("0.000");
+            }
+            else
+            {
+                dynamicBoxRanges += (mzsFiltered[0] - 5).ToString("0.000");
+            }
+            dynamicBoxRanges += "),";
+
+            for (int i = 1; i < mzsFiltered.Count; i++)
             {
                 var mz = mzsFiltered[i];
-                if (i == 0)
-                {
-                    dynamicBoxRanges += "(";
-                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.000");
-                    dynamicBoxRanges += ",";
-                    dynamicBoxRanges += (mz - 50).ToString("0.000");
-                    dynamicBoxRanges += "),";
-                }
-                else if (i == mzsFiltered.Count - 1)
-                {
-                    dynamicBoxRanges += "(";              
-                    dynamicBoxRanges += (mz + 50).ToString("0.000");
-                    dynamicBoxRanges += ",";
-                    dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.000");
-                    dynamicBoxRanges += ")";
-                }
-                else
-                {
-                    var mz_front = mzsFiltered[i-1];
-                    dynamicBoxRanges += "(";
-                    dynamicBoxRanges += (mz_front + 5).ToString("0.000");
-                    dynamicBoxRanges += ",";
-                    dynamicBoxRanges += (mz + 5).ToString("0.000");
-                    dynamicBoxRanges += "),";
-                }   
-
+                var mz_front = mzsFiltered[i - 1];
+                dynamicBoxRanges += "(";
+                dynamicBoxRanges += (mz_front + 5).ToString("0.000");
+                dynamicBoxRanges += ",";
+                dynamicBoxRanges += (mz - 5).ToString("0.000");
+                dynamicBoxRanges += "),";
             }
-            dynamicBoxRanges += "]";
+            dynamicBoxRanges += "(";
+            dynamicBoxRanges += (mzsFiltered.Last() + 5).ToString("0.000");
+            dynamicBoxRanges += ",";
+            dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.000");
+            dynamicBoxRanges += ")";
 
+            dynamicBoxRanges += "]";
             return dynamicBoxRanges;
         }
+
     }
 }
