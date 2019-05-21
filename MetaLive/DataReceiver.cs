@@ -108,10 +108,22 @@ namespace MetaLive
 
                 if (isTakeOver)
                 {
-                    //TO DO: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
+                    //TO THINK: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
                     if (!IsMS1Scan(scan))
                     {
                         Console.WriteLine("MS2 Scan arrived.");
+                        lock (lockerScan)
+                        {
+                            //Add Full MS1 scan or regular Boxcar scans when the UserDefinedScans is empty.
+                            if (UserDefinedScans.Count==0)
+                            {                             
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                                if (Parameters.BoxCarScanSetting.BoxCar && !Parameters.BoxCarScanSetting.BoxDynamic)
+                                {
+                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                                }
+                            }
+                        }
                     }
                     else
                     {
@@ -255,7 +267,8 @@ namespace MetaLive
                                 }
 
                             }
-                        }
+                        } 
+                       
                     }
                 }
             }
@@ -266,6 +279,7 @@ namespace MetaLive
             }
         }
 
+        //Nonsense code Just for testing parallel function
         private void TestThread(object a)
         {
             try
@@ -295,11 +309,6 @@ namespace MetaLive
 
                     if (IsotopicEnvelopes.Count() > 0)
                     {
-                        if (Parameters.BoxCarScanSetting.BoxDynamic)
-                        {
-                            BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
-                        }
-
                         int topN = 0;
                         foreach (var iso in IsotopicEnvelopes)
                         {
@@ -327,22 +336,27 @@ namespace MetaLive
                                 }
                             }                  
                         }
-                    }
 
-                    if (!IsBoxCarScan(scan))
-                    {                       
-                        lock (lockerScan)
+                        //Add Dynamic BoxCar Scan After add MS2 scan.
+                        if (Parameters.BoxCarScanSetting.BoxDynamic)
                         {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            if (Parameters.BoxCarScanSetting.BoxCar)
+                            BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
+                            var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                            dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently   
+                            lock (lockerScan)
                             {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                            }
-                            if (Parameters.BoxCarScanSetting.BoxDynamic)
-                            {
-                                var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently                              
                                 UserDefinedScans.Enqueue(dynamicBoxCarScan);
+                            }
+                        }
+                    }
+                    else //If the arrived scan is dynamic boxcar scan and got no isotopeEnvelops, a full MS1 scan need to be added.
+                    {
+                        if (Parameters.BoxCarScanSetting.BoxDynamic && IsBoxCarScan(scan))
+                        {
+                            lock (lockerScan)
+                            {
+
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                             }
                         }
                     }

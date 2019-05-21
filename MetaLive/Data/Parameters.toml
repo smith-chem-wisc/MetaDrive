@@ -3,7 +3,7 @@ TestMod = false
 TotalTimeInMinute = 5
 
 [BoxCarScanSetting]
-BoxCar = false
+BoxCar = true
 BoxDynamic = false
 BoxCarScans = 2
 BoxCarBoxes = 12

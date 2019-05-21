@@ -78,13 +78,13 @@ namespace MetaLive
                     dynamicBoxRanges += "(";
                     dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.000");
                     dynamicBoxRanges += ",";
-                    dynamicBoxRanges += (mz - 2.5).ToString("0.000");
+                    dynamicBoxRanges += (mz - 50).ToString("0.000");
                     dynamicBoxRanges += "),";
                 }
                 else if (i == mzsFiltered.Count - 1)
                 {
                     dynamicBoxRanges += "(";              
-                    dynamicBoxRanges += (mz + 2.5).ToString("0.000");
+                    dynamicBoxRanges += (mz + 50).ToString("0.000");
                     dynamicBoxRanges += ",";
                     dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.000");
                     dynamicBoxRanges += ")";
