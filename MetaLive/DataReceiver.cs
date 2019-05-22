@@ -46,6 +46,7 @@ namespace MetaLive
         bool isTakeOver = false;
         bool dynamicExclude = true;
         bool placeUserDefinedScan = true;
+        int BoxCarScanNum = 0;
 
         static object lockerExclude = new object();
         static object lockerScan = new object();
@@ -250,7 +251,7 @@ namespace MetaLive
                                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mass_Charges.First());
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
-                                        if (Parameters.BoxCarScanSetting.BoxDynamic)
+                                        if (Parameters.BoxCarScanSetting.BoxCarDynamic)
                                         {
                                             BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
                                         }
@@ -297,14 +298,26 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    var isBoxCarScan = IsBoxCarScan(scan);
+                    if (IsBoxCarScan(scan))
+                    {
+                        BoxCarScanNum--;
+                    }
+                    
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 {0} Scan {1} arrived. Deconvolute.", isBoxCarScan, scanNumber);
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
                     var addMS2Scans = DeconvoluteAndAddIn(scan);
+
+                    if (!Parameters.BoxCarScanSetting.BoxCarDynamic && !Parameters.BoxCarScanSetting.BoxCarStatic)
+                    {
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        }
+                    }
            
-                    if (Parameters.BoxCarScanSetting.BoxDynamic)
+                    if (Parameters.BoxCarScanSetting.BoxCarDynamic)
                     {
                         if (addMS2Scans)
                         {
@@ -331,6 +344,19 @@ namespace MetaLive
                             {
                                 UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                             }
+                        }
+                    }
+
+                    if (Parameters.BoxCarScanSetting.BoxCarStatic)
+                    {
+                        if (BoxCarScanNum == 0)
+                        {
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                            }
+                            BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
                         }
                     }
                 }

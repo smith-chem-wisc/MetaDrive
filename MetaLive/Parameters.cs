@@ -23,8 +23,8 @@ namespace MetaLive
 
     public class BoxCarScanSetting
     {
-        public bool BoxCar { get; set; }
-        public bool BoxDynamic { get; set; }
+        public bool BoxCarStatic { get; set; }
+        public bool BoxCarDynamic { get; set; }
         public int BoxCarScans { get; set; }
         public int BoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
