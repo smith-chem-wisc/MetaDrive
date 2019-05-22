@@ -113,15 +113,6 @@ namespace MetaLive
                     if (!IsMS1Scan(scan))
                     {
                         Console.WriteLine("MS2 Scan arrived.");
-                        //string value;
-                        //if (scan.CommonInformation.TryGetValue("FirstPrecursorMasses", out value) && value)
-                        //{
-                        //    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                        //    if (Parameters.BoxCarScanSetting.BoxCar && !Parameters.BoxCarScanSetting.BoxDynamic)
-                        //    {
-                        //        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                        //    }
-                        //}
                     }
                     else
                     {
