@@ -81,7 +81,6 @@ namespace MetaLive
 
         internal void DetectStartSignal()
         {
-            m_scans = InstrumentAccess.Control.GetScans(false);
             ScanContainer.MsScanArrived += Orbitrap_MsScanArrived_TakeOver;
             while(!isTakeOver)
             {
@@ -150,26 +149,20 @@ namespace MetaLive
                 Console.WriteLine("==================================================");
                 Console.WriteLine("\n{0:HH:mm:ss,fff} scan with {1} centroids arrived", DateTime.Now, scan.CentroidCount);
 
-                if (isTakeOver)
+                //TO THINK: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
+                if (!IsMS1Scan(scan))
                 {
-                    //TO THINK: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
-                    if (!IsMS1Scan(scan))
-                    {
-                        Console.WriteLine("MS2 Scan arrived.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("MS1 Scan arrived.");
-                        if (!TimeIsOver)
-                        {
-                            AddScanIntoQueueAction(scan);
-                        }                      
-                    }
+                    Console.WriteLine("MS2 Scan arrived.");
                 }
                 else
                 {
-                    TakeOverInstrumentMessage(scan);
+                    Console.WriteLine("MS1 Scan arrived.");
+                    if (!TimeIsOver)
+                    {
+                        AddScanIntoQueueAction(scan);
+                    }
                 }
+
             }
         }
 
