@@ -43,10 +43,14 @@ namespace MetaLive
 	class DataReceiver
 	{
         IScans m_scans = null;
+        public IExactiveInstrumentAccess InstrumentAccess { get; set; }
+        public IMsScanContainer ScanContainer { get; set; }
+
         bool isTakeOver = false;
         bool dynamicExclude = true;
         bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
+        bool TimeIsOver = false;
 
         static object lockerExclude = new object();
         static object lockerScan = new object();
@@ -58,6 +62,51 @@ namespace MetaLive
             DynamicExclusionList = new DynamicExclusionList();
             BoxDynamic = new Queue<double>();
 
+            if (Parameters.BoxCarScanSetting.BoxCarStatic && Parameters.MS2ScanSetting.DoMS2)
+            {
+                AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxMS2FromFullScan;
+            }
+            if (Parameters.BoxCarScanSetting.BoxCarStatic && !Parameters.MS2ScanSetting.DoMS2)
+            {
+                AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxNoMS2;
+            }
+        }
+
+        Parameters Parameters { get; set; }
+        Queue<UserDefinedScan> UserDefinedScans { get; set; }
+        DynamicExclusionList DynamicExclusionList { get; set; }
+        Queue<double> BoxDynamic { get; set; }
+
+        public Action<IMsScan> AddScanIntoQueueAction { get; set; }
+
+        internal void DetectStartSignal()
+        {
+            m_scans = InstrumentAccess.Control.GetScans(false);
+            ScanContainer.MsScanArrived += Orbitrap_MsScanArrived_TakeOver;
+            while(!isTakeOver)
+            {
+                 Thread.Sleep(300);
+            }
+            Console.WriteLine("Detect Start Signal!");
+
+            ScanContainer.MsScanArrived -= Orbitrap_MsScanArrived;
+        }
+
+        private void Orbitrap_MsScanArrived_TakeOver(object sender, MsScanEventArgs e)
+        {
+            using (IMsScan scan = (IMsScan)e.GetScan())
+            {
+                TakeOverInstrumentMessage(scan);
+            }
+        }
+
+        internal void DoJob()
+		{
+            Thread childThreadCheckTime = new Thread(CheckTime);
+            childThreadCheckTime.IsBackground = true;
+            childThreadCheckTime.Start();
+            Console.WriteLine("Start Thread for checking time!");
+
             Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
             childThreadExclusionList.IsBackground = true;
             childThreadExclusionList.Start();
@@ -68,15 +117,9 @@ namespace MetaLive
             childThreadPlaceScan.IsBackground = true;
             childThreadPlaceScan.Start();
             Console.WriteLine("Start Thread for Place Scan!");
-        }
 
-        Parameters Parameters { get; set; }
-        Queue<UserDefinedScan> UserDefinedScans { get; set; }
-        DynamicExclusionList DynamicExclusionList { get; set; }
-        Queue<double> BoxDynamic { get; set; }
 
-        internal void DoJob(int timeInMicrosecond)
-		{       
+
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
                 using (m_scans = instrument.Control.GetScans(false))
@@ -88,7 +131,7 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
-                    Thread.CurrentThread.Join(timeInMicrosecond);
+                    Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute*60000);
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
                     orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
@@ -116,22 +159,11 @@ namespace MetaLive
                     }
                     else
                     {
-                        //TestThread(scan);
                         Console.WriteLine("MS1 Scan arrived.");
-                        AddScanIntoQueue(scan);
-
-                        //Task.Run(() => AddScanIntoQueue(scan)); //Task.Run doesn't work for some reason.
-                        //Task.Run(() => TestThread(scan));
-
-                        //ThreadPool.QueueUserWorkItem(new WaitCallback(TestThread), scan);
-
-                        //TO DO: will create too many thread?
-                        //Thread childThreadAddScan = new Thread(() => AddScanIntoQueue(scan))
-                        //{
-                        //    IsBackground = true
-                        //};
-                        //childThreadAddScan.Start();
-                        //Console.WriteLine("Start Thread for Add Scan Into Queue!");
+                        if (!TimeIsOver)
+                        {
+                            AddScanIntoQueueAction(scan);
+                        }                      
                     }
                 }
                 else
@@ -268,18 +300,10 @@ namespace MetaLive
             }
         }
 
-        //Nonsense code Just for testing parallel function
-        private void TestThread(object a)
+        private void CheckTime()
         {
-            try
-            {
-                IMsScan scan = a as IMsScan;
-                var x = scan.CentroidCount;
-                Console.WriteLine("Task works.");
-            }
-            catch(Exception){
-                Console.WriteLine("Task fails.");
-            }
+            Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute*60000);
+            TimeIsOver = true;
         }
 
         private void AddScanIntoQueue(IMsScan scan)
@@ -358,6 +382,79 @@ namespace MetaLive
             }
         }
 
+        private void AddScanIntoQueue_StaticBoxNoMS2(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    if (IsBoxCarScan(scan))
+                    {
+                        BoxCarScanNum--;
+                    }
+
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", IsBoxCarScan(scan));
+
+                    if (BoxCarScanNum == 0)
+                    {
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                        }
+                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
+                    }
+
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("AddScanIntoQueue Exception!");
+            }
+        }
+
+        //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans.
+        private void AddScanIntoQueue_StaticBoxMS2FromFullScan(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", IsBoxCarScan(scan));
+
+                    if (IsBoxCarScan(scan))
+                    {
+                        BoxCarScanNum--;
+                    }
+                    else
+                    {
+                        DeconvoluteAndAddIn(scan);
+                    }
+
+                    if (BoxCarScanNum == 0)
+                    {
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                        }
+                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
+                    }
+
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("AddScanIntoQueue Exception!");
+            }
+        }
+
         private bool DeconvoluteAndAddIn(IMsScan scan)
         {
             var spectrum = TurnScan2Spectrum(scan);
@@ -368,7 +465,7 @@ namespace MetaLive
 
             if (IsotopicEnvelopes.Count() > 0)
             {
-                if (!IsBoxCarScan(scan))
+                if (!IsBoxCarScan(scan) && Parameters.BoxCarScanSetting.BoxCarDynamic)
                 {
                     BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
                 }
@@ -382,6 +479,7 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
+                        //TO DO: DynamicExclusion for Top-down has different logic.
                         if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
                         {
                             var dataTime = DateTime.Now;

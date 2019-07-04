@@ -35,6 +35,7 @@ namespace MetaLive
         public int BoxCarMzRangeLowBound { get; set; }
         public int BoxCarMzRangeHighBound { get; set; }
 
+        //TO DO: The BoxCar Ranges should be optimized based on real data
         public string[] BoxCarMsxInjectRanges
         {
             get
@@ -119,6 +120,7 @@ namespace MetaLive
 
     public class MS2ScanSetting
     {
+        public bool DoMS2 { get; set; }
         public int MS2MaxInjectTimeInMillisecond { get; set; }
         public int MS2Resolution { get; set; }
         public int NCE { get; set; }

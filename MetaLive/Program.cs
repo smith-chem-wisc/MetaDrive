@@ -43,7 +43,14 @@ namespace MetaLive
             {
                 Console.WriteLine("--------------In Gather Mod--------------");
                 var dataReceiver = new DataReceiver(parameters);
-                dataReceiver.DoJob(parameters.GeneralSetting.TotalTimeInMinute * 60000);
+                dataReceiver.InstrumentAccess = Connection.GetFirstInstrument();
+                dataReceiver.ScanContainer = dataReceiver.InstrumentAccess.GetMsScanContainer(0);
+
+                dataReceiver.DetectStartSignal();
+                dataReceiver.DoJob();
+
+                dataReceiver.ScanContainer = null;
+                dataReceiver.InstrumentAccess = null;
             }
 
             Console.WriteLine("Press any key to continue...");
