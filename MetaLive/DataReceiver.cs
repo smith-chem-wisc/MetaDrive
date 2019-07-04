@@ -82,9 +82,11 @@ namespace MetaLive
         internal void DetectStartSignal()
         {
             ScanContainer.MsScanArrived += Orbitrap_MsScanArrived_TakeOver;
+
             while(!isTakeOver)
             {
                  Thread.Sleep(300);
+                Console.WriteLine("Connected.");
             }
             Console.WriteLine("Detect Start Signal!");
 
