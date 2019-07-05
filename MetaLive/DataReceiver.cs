@@ -65,10 +65,13 @@ namespace MetaLive
             if (Parameters.BoxCarScanSetting.BoxCarStatic && Parameters.MS2ScanSetting.DoMS2)
             {
                 AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxMS2FromFullScan;
+                Console.WriteLine("AddScanIntoQueueAction = StaticBoxMS2FromFullScan.");
+
             }
             if (Parameters.BoxCarScanSetting.BoxCarStatic && !Parameters.MS2ScanSetting.DoMS2)
             {
                 AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxNoMS2;
+                Console.WriteLine("AddScanIntoQueueAction = StaticBoxNoMS2.");
             }
         }
 
@@ -85,12 +88,12 @@ namespace MetaLive
 
             while(!isTakeOver)
             {
-                 Thread.Sleep(300);
+                Thread.Sleep(300);
                 Console.WriteLine("Connected.");
             }
             Console.WriteLine("Detect Start Signal!");
 
-            ScanContainer.MsScanArrived -= Orbitrap_MsScanArrived;
+            ScanContainer.MsScanArrived -= Orbitrap_MsScanArrived_TakeOver;
         }
 
         private void Orbitrap_MsScanArrived_TakeOver(object sender, MsScanEventArgs e)

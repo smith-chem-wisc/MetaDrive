@@ -24,6 +24,10 @@ namespace MetaLive
             ICustomScan scan = m_scans.CreateCustomScan();
             scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
             scan.Values["NCE"] = parameters.MS2ScanSetting.NCE.ToString();
+            if (parameters.MS2ScanSetting.NCE_factors != null)
+            {
+                scan.Values["NCE_Factors"] = parameters.MS2ScanSetting.NCE_factors;
+            }
             scan.Values["IsolationRangeLow"] = xl;
             scan.Values["IsolationRangeHigh"] = xh;
             scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();

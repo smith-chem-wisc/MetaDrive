@@ -124,6 +124,7 @@ namespace MetaLive
         public int MS2MaxInjectTimeInMillisecond { get; set; }
         public int MS2Resolution { get; set; }
         public int NCE { get; set; }
+        public string NCE_factors { get; set; }
         public int MS2AgcTarget { get; set; }
         public int MS2MzRangeLowBound { get; set; }
         public int MS2MzRangeHighBound { get; set; }

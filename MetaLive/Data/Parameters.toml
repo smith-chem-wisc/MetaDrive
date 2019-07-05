@@ -23,7 +23,7 @@ MzRangeLowBound = 300
 MzRangeHighBound = 1650
 
 [MS1IonSelecting]
-TopN = 10
+TopN = 5
 DynamicExclusion = true
 ExclusionDuration = 30
 IsolationWindow = 1.25
@@ -37,6 +37,7 @@ DoMS2 = true
 MS2MaxInjectTimeInMillisecond = 100
 MS2Resolution = 15000
 NCE = 27
+NCE_factors = "[0.7, 1.0, 1.3]"
 MS2AgcTarget = 100000
 MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800
