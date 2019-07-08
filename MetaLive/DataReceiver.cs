@@ -253,7 +253,7 @@ namespace MetaLive
                 //TO DO: should I use spining or blocking
                 while (placeUserDefinedScan)
                 {
-                    Thread.Sleep(30); //TO DO: How to control the Thread
+                    Thread.Sleep(10); //TO DO: How to control the Thread
 
                     //Console.WriteLine("Check the UserDefinedScans.");
 

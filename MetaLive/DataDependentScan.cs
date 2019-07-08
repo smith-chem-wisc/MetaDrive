@@ -22,18 +22,34 @@ namespace MetaLive
             string xl = (mass_charge.Item1.ToMz(mass_charge.Item2) - Range).ToString("0.000");
             string xh = (mass_charge.Item1.ToMz(mass_charge.Item2) + Range).ToString("0.000");            
             ICustomScan scan = m_scans.CreateCustomScan();
-            scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
-            scan.Values["NCE"] = parameters.MS2ScanSetting.NCE.ToString();
-            if (parameters.MS2ScanSetting.NCE_factors != null)
-            {
-                scan.Values["NCE_Factors"] = parameters.MS2ScanSetting.NCE_factors;
-            }
+
+            scan.Values["FirstMass"] = parameters.MS2ScanSetting.MS2MzRangeLowBound.ToString();
+            scan.Values["LastMass"] = (mass_charge.Item1 * 1.2).ToString("0.00");
             scan.Values["IsolationRangeLow"] = xl;
             scan.Values["IsolationRangeHigh"] = xh;
             scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
-            scan.Values["FirstMass"] = parameters.MS2ScanSetting.MS2MzRangeLowBound.ToString();
-            scan.Values["LastMass"] = parameters.MS2ScanSetting.MS2MzRangeHighBound.ToString();
+
+            scan.Values["MaxIT"] = parameters.MS2ScanSetting.MS2MaxInjectTimeInMillisecond.ToString();
+            scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
+            scan.Values["Polarity"] = parameters.GeneralSetting.Polarity.ToString();
+            scan.Values["NCE"] = parameters.MS2ScanSetting.NCE.ToString();
+            scan.Values["NCE_NormCharge"] = parameters.MS1IonSelecting.NormCharge.ToString();
+            scan.Values["NCE_SteppedEnergy"] = "0";
+            if (parameters.MS2ScanSetting.NCE_factors != "null")
+            {
+                scan.Values["NCE_Factors"] = parameters.MS2ScanSetting.NCE_factors;
+            }
+            scan.Values["SourceCID"] = parameters.GeneralSetting.SourceCID.ToString("0.00");
+            scan.Values["Microscans"] = "1";
             scan.Values["AGC_Target"] = parameters.MS2ScanSetting.MS2AgcTarget.ToString();
+            scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();
+
+
+            scan.Values["MsxInjectRanges"] = "[]";
+            scan.Values["MsxInjectTargets"] = "[]";
+            scan.Values["MsxInjectMaxITs"] = "[]";
+            scan.Values["MsxInjectNCEs"] = "[]";
+            scan.Values["MsxInjectDirectCEs"] = "[]";
 
             //Console.WriteLine("++++++++++++++++++");
             //Console.WriteLine("Target Isolation Mass: {0}, {1}", xl, xh);

@@ -1,6 +1,9 @@
 [GeneralSetting]
 TestMod = false
 TotalTimeInMinute = 5
+Polarity = 0
+SourceCID = 0
+AGC_Mode = 1
 
 [BoxCarScanSetting]
 BoxCarStatic = true
@@ -8,19 +11,21 @@ BoxCarDynamic = false
 BoxCarScans = 2
 BoxCarBoxes = 12
 BoxCarOverlap = 1
-BoxCarMaxInjectTimeInMillisecond = 100
+BoxCarMaxInjectTimeInMillisecond = 60
 BoxCarResolution = 120000
-BoxCarAgcTarget = 3000000
+BoxCarAgcTarget = 500000
 BoxCarNormCharge = 2
 BoxCarMzRangeLowBound = 400
-BoxCarMzRangeHighBound = 1600
+BoxCarMzRangeHighBound = 1200
+BoxCarMicroScans = 1
 
 [FullScanSetting]
-MaxInjectTimeInMillisecond = 25
+MaxInjectTimeInMillisecond = 20
 Resolution = 60000
 AgcTarget = 3000000
 MzRangeLowBound = 300
 MzRangeHighBound = 1650
+Microscans = 1
 
 [MS1IonSelecting]
 TopN = 5
@@ -34,10 +39,10 @@ IntensityThreshold = 0
 
 [MS2ScanSetting]
 DoMS2 = true
-MS2MaxInjectTimeInMillisecond = 100
+MS2MaxInjectTimeInMillisecond = 25
 MS2Resolution = 15000
 NCE = 27
-NCE_factors = "[0.7, 1.0, 1.3]"
+NCE_factors = "null"
 MS2AgcTarget = 100000
 MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800

@@ -19,6 +19,9 @@ namespace MetaLive
     {
         public bool TestMod { get; set; }
         public int TotalTimeInMinute { get; set; }
+        public int Polarity { get; set; }
+        public double SourceCID { get; set; }
+        public int AGC_Mode { get; set; }
     }
 
     public class BoxCarScanSetting
@@ -34,6 +37,7 @@ namespace MetaLive
         public int BoxCarNormCharge { get; set; }
         public int BoxCarMzRangeLowBound { get; set; }
         public int BoxCarMzRangeHighBound { get; set; }
+        public int BoxCarMicroScans { get; set; }
 
         //TO DO: The BoxCar Ranges should be optimized based on real data
         public string[] BoxCarMsxInjectRanges
@@ -78,14 +82,32 @@ namespace MetaLive
             }
         }
 
+        public string BoxCarMsxInjectTargets
+        {
+            get
+            {
+                var msxInjectTarget = "[";
+                for (int i = 0; i < BoxCarBoxes; i++)
+                {
+                    msxInjectTarget += BoxCarAgcTarget / BoxCarBoxes;
+                    if (i != BoxCarBoxes - 1)
+                    {
+                        msxInjectTarget += ",";
+                    }
+                }
+                msxInjectTarget += "]";
+                return msxInjectTarget;
+            }
+        }
+
         public string BoxCarMsxInjectMaxITs
         {
             get
             {
-                var msxInjectMaxITs = "[";
+                var msxInjectMaxITs= "[";
                 for (int i = 0; i < BoxCarBoxes; i++)
                 {
-                    msxInjectMaxITs += BoxCarAgcTarget / BoxCarBoxes;
+                    msxInjectMaxITs += BoxCarMaxInjectTimeInMillisecond / BoxCarBoxes;
                     if (i != BoxCarBoxes - 1)
                     {
                         msxInjectMaxITs += ",";
@@ -104,6 +126,7 @@ namespace MetaLive
         public int AgcTarget { get; set; }
         public int MzRangeLowBound { get; set; }
         public int MzRangeHighBound { get; set; }
+        public int Microscans { get; set; }
     }
 
     public class MS1IonSelecting
