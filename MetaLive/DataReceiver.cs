@@ -76,6 +76,7 @@ namespace MetaLive
         }
 
         Parameters Parameters { get; set; }
+        DeconvolutionParameter DeconvolutionParameter { get; set; }
         Queue<UserDefinedScan> UserDefinedScans { get; set; }
         DynamicExclusionList DynamicExclusionList { get; set; }
         Queue<double> BoxDynamic { get; set; }
@@ -89,7 +90,7 @@ namespace MetaLive
             while(!isTakeOver)
             {
                 Thread.Sleep(300);
-                Console.WriteLine("Connected.");
+                Console.WriteLine("Connected. Listening...");
             }
             Console.WriteLine("Detect Start Signal!");
 
@@ -102,6 +103,28 @@ namespace MetaLive
             {
                 TakeOverInstrumentMessage(scan);
             }
+        }
+
+        private void TakeOverInstrumentMessage(IMsScan scan)
+        {
+            object massRanges;
+            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
+            try
+            {
+                if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+                {
+                    x = (ThermoFisher.Foundation.IO.Range[])massRanges;
+                    Console.WriteLine("{0}, {1}", x.First().Low, x.First().High);
+
+                    if (x.First().Low == 374.0 && x.First().High == 1751.0)
+                    {
+                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+                        isTakeOver = true;
+                        FullScan.PlaceFullScan(m_scans, Parameters);
+                    }
+                }
+            }
+            catch { }
         }
 
         internal void DoJob()
@@ -182,29 +205,7 @@ namespace MetaLive
             placeUserDefinedScan = false;
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream closed (end of method)");            
-        }	
-
-        private void TakeOverInstrumentMessage(IMsScan scan)
-        {
-            object massRanges;
-            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
-            try
-            {
-                if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
-                {
-                    x = (ThermoFisher.Foundation.IO.Range[])massRanges;                  
-                    Console.WriteLine("{0}, {1}", x.First().Low, x.First().High);
-
-                    if (x.First().Low == 374.0 && x.First().High == 1751.0)
-                    {
-                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
-                        isTakeOver = true;
-                        FullScan.PlaceFullScan(m_scans, Parameters);
-                    }
-                }
-            }
-            catch { }
-        }
+        }	   
 
         private void DynamicExclusionListDeqeue()
         {
@@ -304,73 +305,22 @@ namespace MetaLive
             TimeIsOver = true;
         }
 
-        private void AddScanIntoQueue(IMsScan scan)
+        private void AddScanIntoQueue_BottomUp(IMsScan scan)
         {
             try
             {   
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    if (IsBoxCarScan(scan))
-                    {
-                        BoxCarScanNum--;
-                    }
-                    
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
-                    var addMS2Scans = DeconvoluteAndAddIn(scan);
+                    DeconvoluteMS1ScanAddMS2Scan(scan);
 
-                    if (!Parameters.BoxCarScanSetting.BoxCarDynamic && !Parameters.BoxCarScanSetting.BoxCarStatic)
+                    lock (lockerScan)
                     {
-                        lock (lockerScan)
-                        {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                        }
-                    }
-           
-                    if (Parameters.BoxCarScanSetting.BoxCarDynamic)
-                    {
-                        if (addMS2Scans)
-                        {
-                            if (IsBoxCarScan(scan))
-                            {
-                                lock (lockerScan)
-                                {
-                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                                }
-                            }
-                            else
-                            {
-                                var dynamicBoxCarScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                dynamicBoxCarScan.dynamicBox.Add(BoxDynamic.Dequeue());  //Only add one mass for dynamic box currently   
-                                lock (lockerScan)
-                                {
-                                    UserDefinedScans.Enqueue(dynamicBoxCarScan);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            }
-                        }
-                    }
-
-                    if (Parameters.BoxCarScanSetting.BoxCarStatic)
-                    {
-                        if (BoxCarScanNum == 0)
-                        {
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                            }
-                            BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
-                        }
+                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                     }
                 }
             }
@@ -432,7 +382,7 @@ namespace MetaLive
                     }
                     else
                     {
-                        DeconvoluteAndAddIn(scan);
+                        DeconvoluteMS1ScanAddMS2Scan(scan);
                     }
 
                     if (BoxCarScanNum == 0)
@@ -451,58 +401,6 @@ namespace MetaLive
             {
                 Console.WriteLine("AddScanIntoQueue Exception!");
             }
-        }
-
-        private bool DeconvoluteAndAddIn(IMsScan scan)
-        {
-            var spectrum = TurnScan2Spectrum(scan);
-
-            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-            var IsotopicEnvelopes = spectrum.Deconvolute(GetMzRange(scan), deconvolutionParameter).OrderByDescending(p => p.totalIntensity).ToArray(); //Ordered by intensity
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute {1}", DateTime.Now, IsotopicEnvelopes.Count());
-
-            if (IsotopicEnvelopes.Count() > 0)
-            {
-                if (!IsBoxCarScan(scan) && Parameters.BoxCarScanSetting.BoxCarDynamic)
-                {
-                    BoxDynamic.Enqueue(IsotopicEnvelopes.First().monoisotopicMass);
-                }
-                
-                int topN = 0;
-                foreach (var iso in IsotopicEnvelopes)
-                {
-                    if (topN >= Parameters.MS1IonSelecting.TopN)
-                    {
-                        break;
-                    }
-                    lock (lockerExclude)
-                    {
-                        //TO DO: DynamicExclusion for Top-down has different logic.
-                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-
-                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                            //TO DO: get the best Mz.
-                            theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(theScan);
-                                Console.WriteLine("dataDependentScans increased.");
-                            }
-                            topN++;
-                        }
-                    }
-                }
-                if (topN > 0)
-                {
-                    return true;
-                }
-                return false;
-            }
-            return false;
         }
 
         private bool IsMS1Scan(IMsScan scan)
@@ -534,27 +432,55 @@ namespace MetaLive
             return false;
         }
 
-        private MzSpectrumBU TurnScan2Spectrum(IMsScan scan)
+        private void DeconvoluteMS1ScanAddMS2Scan(IMsScan scan)
         {
-            return new MzSpectrumBU(scan.Centroids.Select(p=>p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
-        }
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
 
-        private MzRange GetMzRange(IMsScan scan)
-        {
-            return new MzRange(scan.Centroids.First().Mz, scan.Centroids.Last().Mz);
-        }
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
 
-        private double getPrecusorMass(IMsScan scan)
-        {
-            object a;
-            if (scan.CommonInformation.TryGetRawValue("Masses", out a))
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum", DateTime.Now);
+
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter);
+
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
+
+            IsotopicEnvelopes = IsotopicEnvelopes.OrderByDescending(p => p.totalIntensity).ToArray();
+
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute order by intensity", DateTime.Now, IsotopicEnvelopes.Count());
+
+            if (IsotopicEnvelopes.Count() > 0)
             {
-                var b = (double[])a;
-                Console.WriteLine("Current ms2 scan mass: {0}", b);
-                return b.First();
-            }
-            return 0;
-        }
+                int topN = 0;
+                foreach (var iso in IsotopicEnvelopes)
+                {
+                    if (topN >= Parameters.MS1IonSelecting.TopN)
+                    {
+                        break;
+                    }
+                    lock (lockerExclude)
+                    {
+                        //TO DO: DynamicExclusion for Top-down has different logic.
+                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                        {
+                            var dataTime = DateTime.Now;
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
 
+                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                            //TO DO: get the best Mz.
+                            theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(theScan);
+                                Console.WriteLine("dataDependentScans increased.");
+                            }
+                            topN++;
+                        }
+                    }
+                }
+            }
+
+        }
     }
 }

@@ -54,5 +54,6 @@ namespace MassSpectrometry
             sb.Append((IsNeuCode ? 1:0) + "\t");
             return sb.ToString();
         }
+
     }
 }
