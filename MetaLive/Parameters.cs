@@ -20,7 +20,7 @@ namespace MetaLive
         public bool TestMod { get; set; }
         public int TotalTimeInMinute { get; set; }
         public int Polarity { get; set; }
-        public double SourceCID { get; set; }
+        public int SourceCID { get; set; }
         public int AGC_Mode { get; set; }
     }
 
@@ -151,6 +151,6 @@ namespace MetaLive
         public int MS2AgcTarget { get; set; }
         public int MS2MzRangeLowBound { get; set; }
         public int MS2MzRangeHighBound { get; set; }
-        public int MS2MicroScan { get; set; }
+        public int MS2MicroScans { get; set; }
     }
 }

@@ -28,7 +28,7 @@ namespace MetaLive
             scan.Values["NCE_NormCharge"] = parameters.MS1IonSelecting.NormCharge.ToString();
             scan.Values["NCE_SteppedEnergy"] = "0";
             scan.Values["NCE_Factors"] = "[]";
-            scan.Values["SourceCID"] = parameters.GeneralSetting.SourceCID.ToString("0.00");
+            scan.Values["SourceCID"] = parameters.GeneralSetting.SourceCID.ToString();
             scan.Values["Microscans"] = parameters.FullScanSetting.Microscans.ToString();
             scan.Values["AGC_Target"] = parameters.FullScanSetting.AgcTarget.ToString();
             scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();

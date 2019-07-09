@@ -24,7 +24,7 @@ namespace MetaLive
             ICustomScan scan = m_scans.CreateCustomScan();
 
             scan.Values["FirstMass"] = parameters.MS2ScanSetting.MS2MzRangeLowBound.ToString();
-            scan.Values["LastMass"] = (mass_charge.Item1 * 1.2).ToString("0.00");
+            scan.Values["LastMass"] = parameters.MS2ScanSetting.MS2MzRangeHighBound.ToString(); //TO THINK: Dynamic range as MqLive?
             scan.Values["IsolationRangeLow"] = xl;
             scan.Values["IsolationRangeHigh"] = xh;
             scan.Values["Resolution"] = parameters.MS2ScanSetting.MS2Resolution.ToString();
@@ -40,7 +40,7 @@ namespace MetaLive
                 scan.Values["NCE_Factors"] = parameters.MS2ScanSetting.NCE_factors;
             }
             scan.Values["SourceCID"] = parameters.GeneralSetting.SourceCID.ToString("0.00");
-            scan.Values["Microscans"] = "1";
+            scan.Values["Microscans"] = parameters.MS2ScanSetting.MS2MicroScans.ToString();
             scan.Values["AGC_Target"] = parameters.MS2ScanSetting.MS2AgcTarget.ToString();
             scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();
 

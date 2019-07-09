@@ -522,10 +522,11 @@ namespace MetaLive
         {
             //TO DO: better way to check if is boxcar scan.
             string value;
-            if (scan.CommonInformation.TryGetValue("LowMass", out value))
+            string valueHigh;
+            if (scan.CommonInformation.TryGetValue("LowMass", out value) && scan.CommonInformation.TryGetValue("HighMass", out valueHigh))
             {   
                 Console.WriteLine("IsBoxCarScan: " + value + "," + Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString());
-                if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString())
+                if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString() && valueHigh == Parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString())
                 {
                     return true;
                 }

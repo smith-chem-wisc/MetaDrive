@@ -21,7 +21,7 @@ BoxCarMicroScans = 1
 
 [FullScanSetting]
 MaxInjectTimeInMillisecond = 20
-Resolution = 60000
+Resolution = 120000
 AgcTarget = 3000000
 MzRangeLowBound = 300
 MzRangeHighBound = 1650
@@ -46,4 +46,4 @@ NCE_factors = "null"
 MS2AgcTarget = 100000
 MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800
-MS2MicroScan = 4
+MS2MicroScans = 1
