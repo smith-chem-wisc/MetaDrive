@@ -390,14 +390,16 @@ namespace MassSpectrometry
         //TO DO: speed up this function. 
         public IEnumerable<int> ExtractIndicesByY()
         {
-            var YArrayIndex = Enumerable.Range(0, Size).ToArray();
             var YArrayCopy = new double[Size];
             Array.Copy(YArray, YArrayCopy, Size);
-
             var sorted = YArrayCopy.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
 
-            return sorted.Select(x => x.Value).ToArray();
-
+            int z = Size - 1;
+            while (z >= 0)
+            {
+                yield return sorted.Select(x => x.Value).ElementAt(z);
+                z--;
+            }
         }
 
 
@@ -408,24 +410,27 @@ namespace MassSpectrometry
             var YArrayCopy = new double[Y.Length];
             Array.Copy(Y, YArrayCopy, Y.Length);
             Array.Sort(YArrayCopy, YArrayIndex);
-            return YArrayIndex;
+            int z = Y.Length - 1;
+            while (z >=0 )
+            {
+                yield return YArrayIndex[z];
+                z--;
+            }          
         }
+
         public static IEnumerable<int> ExtractIndicesByY_new(double[] Y)
         {
-            var YArrayIndex = Enumerable.Range(0, Y.Length).ToArray();
             var YArrayCopy = new double[Y.Length];
             Array.Copy(Y, YArrayCopy, Y.Length);
-            //Array.Sort(YArrayCopy, YArrayIndex);
-            //int i = Size - 1;
-            //while (i >= 0)
-            //{             
-            //    yield return YArrayIndex[i];
-            //    i--;
-            //}
 
-            var sorted = YArrayCopy.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
+            var sorted = YArrayCopy.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key);
 
-            return sorted.Select(x => x.Value).ToArray();
+            int z = Y.Length - 1;
+            while (z >= 0)
+            {
+                yield return sorted.Select(x=>x.Value).ElementAt(z);
+                z--;
+            }
         }
 
         public int? GetClosestPeakIndex(double x)

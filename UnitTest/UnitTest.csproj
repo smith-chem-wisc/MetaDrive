@@ -17,4 +17,10 @@
     <ProjectReference Include="..\MetaLive\MetaLive.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
