@@ -482,5 +482,62 @@ namespace MetaLive
             }
 
         }
+
+        //This deconvolution only deconvolute TopN peaks to generate MS2 scans. Deconvolute one peak, add one MS2 scan. 
+        //There is no need to wait to deconvolute all peaks and then add all MS2 scans. 
+        //In theory, this should reduce the time for deconvolute all peaks.
+        private void DeconvoluteMS1ScanAddMS2Scan_TopN(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
+
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+
+            HashSet<double> seenPeaks = new HashSet<double>();
+            int topN = 0;
+            foreach (var peakIndex in spectrum.ExtractIndicesByY())
+            {
+                if (topN >= Parameters.MS1IonSelecting.TopN)
+                {
+                    break;
+                }
+
+                if (seenPeaks.Contains(spectrum.XArray[peakIndex]))
+                {
+                    continue;
+                }
+                var iso = spectrum.DeconvolutePeak(peakIndex, DeconvolutionParameter);
+                if (iso == null)
+                {
+                    continue;
+                }
+                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);
+                }
+
+                lock (lockerExclude)
+                {
+                    //TO DO: DynamicExclusion for Top-down has different logic.
+                    if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                    {
+                        var dataTime = DateTime.Now;
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                        var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                        //TO DO: get the best Mz.
+                        theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(theScan);
+                            Console.WriteLine("dataDependentScans increased.");
+                        }
+                        topN++;
+                    }
+                }
+            }
+        }
+
     }
 }
