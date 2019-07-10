@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28307.168
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetaLive", "MetaLive\MetaLive.csproj", "{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "UnitTest\UnitTest.csproj", "{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,14 @@ Global
 		{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}.Release|x64.ActiveCfg = Release|x64
 		{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}.Release|x64.Build.0 = Release|x64
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Debug|x64.Build.0 = Debug|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Release|x64.ActiveCfg = Release|Any CPU
+		{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

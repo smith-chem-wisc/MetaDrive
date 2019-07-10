@@ -8,7 +8,7 @@ using Chemistry;
 
 namespace MetaLive
 {
-    class BoxCarScan
+    public class BoxCarScan
     {
         public static string[] StaticBoxCar_2_12_Scan = new string[2]
         { "[(400, 423.2), (441.2, 459.9), (476.3, 494.3), (510.3, 528.8), (545, 563.8), (580.8, 600.3), (618.4, 639.8), " +

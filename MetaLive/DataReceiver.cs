@@ -316,7 +316,7 @@ namespace MetaLive
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
-                    DeconvoluteMS1ScanAddMS2Scan(scan);
+                    DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
 
                     lock (lockerScan)
                     {
@@ -382,7 +382,7 @@ namespace MetaLive
                     }
                     else
                     {
-                        DeconvoluteMS1ScanAddMS2Scan(scan);
+                        DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
                     }
 
                     if (BoxCarScanNum == 0)
@@ -490,7 +490,7 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
             HashSet<double> seenPeaks = new HashSet<double>();
             int topN = 0;

@@ -9,7 +9,7 @@ using Chemistry;
 
 namespace MetaLive
 {
-    class DataDependentScan
+    public class DataDependentScan
     {
         public static void PlaceMS2Scan(IScans m_scans, Parameters parameters, Tuple<double, int> mass_charge)
         {

@@ -12,16 +12,14 @@ using Nett;
 
 namespace MetaLive
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             //Initiate Element
-            var DataDir = AppDomain.CurrentDomain.BaseDirectory;
-            var ElementsLocation = Path.Combine(DataDir, @"Data", @"elements.dat");
-            Loaders.LoadElements(ElementsLocation);
+            Loaders.LoadElements();
             //Loading avagine model for Deconvolution
             var test = new MzSpectrumBU(new double[]{ 1}, new double[] { 1 }, true);
 
