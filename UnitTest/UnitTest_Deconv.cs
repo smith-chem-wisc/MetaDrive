@@ -44,7 +44,6 @@ namespace UnitTest
             long[] watch = new long[circle];
             long[] watch1 = new long[circle];
 
-            //TO THINK: Why only the first circle consume longer time.
             for (int i = 0; i < circle; i++)
             {
                 Stopwatch stopwatch = new Stopwatch();
@@ -69,15 +68,21 @@ namespace UnitTest
 
         [Test]
         public static void Test_RealData()
-        {
-            var test = new MzSpectrumBU(new double[] { 1 }, new double[] { 1 }, true);
-
+        {            
             string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, "20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML");
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
             var scans = file.GetAllScansList();
 
+            var test = new MzSpectrumBU(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+            test.DeconvolutePeak(test.ExtractIndicesByY().First(), new DeconvolutionParameter());
+
             var ms1scans = scans.Where(p => p.MsnOrder == 1).ToList();
             DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
+            List<NeuCodeIsotopicEnvelop>[] neuCodeIsotopicEnvelops = new List<NeuCodeIsotopicEnvelop>[ms1scans.Count];
+            long[] watch = new long[ms1scans.Count];
+            long[] watch1 = new long[ms1scans.Count];
+            long[] watch2 = new long[ms1scans.Count];
+            int i = 0;
             foreach (var s in ms1scans)
             {
                 Stopwatch stopwatch = new Stopwatch();
@@ -98,7 +103,7 @@ namespace UnitTest
 
                 Stopwatch stopwatch2 = new Stopwatch();
                 stopwatch2.Start();
-                List<NeuCodeIsotopicEnvelop> neuCodeIsotopicEnvelops = new List<NeuCodeIsotopicEnvelop>();
+                List<NeuCodeIsotopicEnvelop> Envelops = new List<NeuCodeIsotopicEnvelop>();
                 HashSet<double> seenPeaks = new HashSet<double>();
                 int topN = 0;
 
@@ -118,7 +123,7 @@ namespace UnitTest
                     {
                         continue;
                     }
-                    neuCodeIsotopicEnvelops.Add(iso);
+                    Envelops.Add(iso);
                     foreach (var seenPeak in iso.peaks.Select(b => b.mz))
                     {
                         seenPeaks.Add(seenPeak);
@@ -126,8 +131,17 @@ namespace UnitTest
                     topN++;
                 }
                 stopwatch2.Stop();
+
+                watch[i] = stopwatch.ElapsedMilliseconds;
+                watch1[i] = stopwatch1.ElapsedMilliseconds;
+                watch2[i] = stopwatch2.ElapsedMilliseconds; //TO THINK: why the first element of watch2 is larger than others?
+                neuCodeIsotopicEnvelops[i] = Envelops;
+                i++;
             }
+
+            Assert.That(neuCodeIsotopicEnvelops.Count() == 380);
         }
+
 
     }
 }
