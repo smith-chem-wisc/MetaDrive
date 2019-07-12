@@ -130,9 +130,7 @@ namespace MetaLive
                         Console.WriteLine("Instrument take over Scan by IAPI is dectected.");                      
                         isTakeOver = true;
 
-                        //GetExpectedRuntime(scan);
-                        //Console.WriteLine("Instrument take over duration time: {0}", TimeInMinute);
-                        //WriteParameterFile(scan);
+                        Console.WriteLine("Instrument take over duration time: {0}", TimeInMinute);
 
                         FullScan.PlaceFullScan(m_scans, Parameters);
                     }
@@ -141,53 +139,6 @@ namespace MetaLive
             catch (Exception)
             {
                 Console.WriteLine("TakeOver Execption!");
-            }
-        }
-
-        private void WriteParameterFile(IMsScan scan)
-        {
-            Console.WriteLine("I am here 1.");
-
-            string TrueFileName;
-            try
-            {
-                if (scan.SpecificInformation.TryGetValue("Acquisition TrueFileName", out TrueFileName))
-                {
-                    Console.WriteLine("I am here 2.");
-
-                    Console.WriteLine(@TrueFileName);
-                    var apath = System.IO.Path.GetDirectoryName(@TrueFileName);
-                    var name = System.IO.Path.GetFileNameWithoutExtension(@TrueFileName);
-                    var time = DateTime.Now.ToString("yyyy-MM-dd-HH-mm");
-                    Nett.Toml.WriteFile(Parameters, System.IO.Path.Combine(apath, name + "_" + time + "_running.toml"));
-                }
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("Write Toml Execption!");
-            }
-        }
-
-        private void GetExpectedRuntime(IMsScan scan)
-        {
-            try
-            {
-                string timeInMinute;
-                if (scan.SpecificInformation.TryGetValue("Acquisition ExpectedRuntime", out timeInMinute))
-                {
-                    Console.WriteLine(timeInMinute);
-                    var time = double.Parse(timeInMinute);
-                    if (time < 1)
-                    {
-                        TimeInMinute =  1;
-                    }
-                    TimeInMinute = time;
-                }
-                TimeInMinute = 1;
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("Get Time Execption!");
             }
         }
 
