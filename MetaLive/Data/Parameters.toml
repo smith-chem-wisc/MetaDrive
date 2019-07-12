@@ -1,6 +1,7 @@
 [GeneralSetting]
 TestMod = false
 TotalTimeInMinute = 5
+IsBottomUp = true
 Polarity = 0
 SourceCID = 0
 AGC_Mode = 1

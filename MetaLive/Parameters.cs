@@ -19,6 +19,7 @@ namespace MetaLive
     {
         public bool TestMod { get; set; }
         public int TotalTimeInMinute { get; set; }
+        public bool IsBottomUp { get; set; }
         public int Polarity { get; set; }
         public int SourceCID { get; set; }
         public int AGC_Mode { get; set; }

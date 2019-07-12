@@ -31,6 +31,8 @@ namespace MetaLive
             }
             Parameters parameters = AddParametersFromFile(path);
 
+            
+
             //Start the task
             if (parameters.GeneralSetting.TestMod)
             {
@@ -71,12 +73,19 @@ namespace MetaLive
 
             parameters = Toml.ReadFile<Parameters>(filePath);
 
+            WriteCurrentParameterFile(filePath, parameters);
+
             var path = Path.GetDirectoryName(filePath);
 
-            //TO DO: If we want to write it in the future
-            //Toml.WriteFile(parameters, Path.Combine(path, @"test.toml"));
-
             return parameters;
+        }
+
+        private static void WriteCurrentParameterFile(string TrueFileName, Parameters parameters)
+        {
+            var apath = System.IO.Path.GetDirectoryName(TrueFileName);
+            var name = System.IO.Path.GetFileNameWithoutExtension(TrueFileName);
+            var time = DateTime.Now.ToString("yyyy-MM-dd-HH-mm");
+            Nett.Toml.WriteFile(parameters, System.IO.Path.Combine(apath, name + "_" + time + "_running.toml"));
         }
 
     }

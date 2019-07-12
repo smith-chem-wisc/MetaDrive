@@ -17,6 +17,13 @@ namespace MetaLive
                 "(683.3, 709.3), (734.4, 765.4), (798.9, 838.9), (884.4, 946), (1031, 1201)]"
         };
 
+        public static string[] StaticBoxCar_2_12_Scan_TopDown = new string[2]
+        { "[(499, 546.8), (591.2, 638), (682.8, 729.7), (774.5, 821.3), (866.2, 913), (957.8, 1004.7), " +
+            "(1049.5, 1096.3), (1141.2, 1188), (1232.8, 1279.7), (1324.5, 1371.3), (1416.2, 1463), (1507.8, 1554.7)]",
+        "[(545.8, 592.7), (637, 683.8), (728.7, 775.5), (820.3, 867.2), (912, 958.8), (1003.7, 1050.5), (1095.3, 1142.2), " +
+            "(1187, 1233.8), (1278.7, 1325.5), (1370.3, 1417.2), (1462, 1508.8), (1553.7, 1601)]"
+        };
+
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters)
         {
             if (m_scans.PossibleParameters.Length == 0)
@@ -49,11 +56,19 @@ namespace MetaLive
             scan.Values["MsxInjectDirectCEs"] = "[]";
             for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
             {
-                scan.Values["MsxInjectRanges"] = StaticBoxCar_2_12_Scan[i];
+                if (parameters.GeneralSetting.IsBottomUp)
+                {
+                    scan.Values["MsxInjectRanges"] = StaticBoxCar_2_12_Scan[i];
+                }
+                else
+                {
+                    scan.Values["MsxInjectRanges"] = StaticBoxCar_2_12_Scan_TopDown[i];
+                }
+                //scan.Values["MsxInjectRanges"] = parameters.BoxCarScanSetting.BoxCarMsxInjectRanges[i];
 
                 Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
                 m_scans.SetCustomScan(scan);
-            }           
+            }
         }
 
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, List<double> dynamicBox)

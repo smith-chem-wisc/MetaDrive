@@ -37,11 +37,11 @@ using Chemistry;
 
 namespace MetaLive
 {
-	/// <summary>
-	/// Show incoming data packets and signals of acquisition start, acquisition stop and each scan.
-	/// </summary>
-	class DataReceiver
-	{
+    /// <summary>
+    /// Show incoming data packets and signals of acquisition start, acquisition stop and each scan.
+    /// </summary>
+    class DataReceiver
+    {
         IScans m_scans = null;
         public IExactiveInstrumentAccess InstrumentAccess { get; set; }
         public IMsScanContainer ScanContainer { get; set; }
@@ -51,13 +51,22 @@ namespace MetaLive
         bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
         bool TimeIsOver = false;
-
+        double TimeInMinute
+        {
+            get
+            {
+                Console.WriteLine("Accqusition time = {0)", Parameters.GeneralSetting.TotalTimeInMinute);
+                return (double)Parameters.GeneralSetting.TotalTimeInMinute;
+            }
+            set { }
+        }
         static object lockerExclude = new object();
         static object lockerScan = new object();
 
         internal DataReceiver(Parameters parameters)
         {
             Parameters = parameters;
+            DeconvolutionParameter = new DeconvolutionParameter();
             UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
             BoxDynamic = new Queue<double>();
@@ -118,13 +127,68 @@ namespace MetaLive
 
                     if (x.First().Low == 374.0 && x.First().High == 1751.0)
                     {
-                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");                      
                         isTakeOver = true;
+
+                        //GetExpectedRuntime(scan);
+                        //Console.WriteLine("Instrument take over duration time: {0}", TimeInMinute);
+                        //WriteParameterFile(scan);
+
                         FullScan.PlaceFullScan(m_scans, Parameters);
                     }
                 }
             }
-            catch { }
+            catch (Exception)
+            {
+                Console.WriteLine("TakeOver Execption!");
+            }
+        }
+
+        private void WriteParameterFile(IMsScan scan)
+        {
+            Console.WriteLine("I am here 1.");
+
+            string TrueFileName;
+            try
+            {
+                if (scan.SpecificInformation.TryGetValue("Acquisition TrueFileName", out TrueFileName))
+                {
+                    Console.WriteLine("I am here 2.");
+
+                    Console.WriteLine(@TrueFileName);
+                    var apath = System.IO.Path.GetDirectoryName(@TrueFileName);
+                    var name = System.IO.Path.GetFileNameWithoutExtension(@TrueFileName);
+                    var time = DateTime.Now.ToString("yyyy-MM-dd-HH-mm");
+                    Nett.Toml.WriteFile(Parameters, System.IO.Path.Combine(apath, name + "_" + time + "_running.toml"));
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Write Toml Execption!");
+            }
+        }
+
+        private void GetExpectedRuntime(IMsScan scan)
+        {
+            try
+            {
+                string timeInMinute;
+                if (scan.SpecificInformation.TryGetValue("Acquisition ExpectedRuntime", out timeInMinute))
+                {
+                    Console.WriteLine(timeInMinute);
+                    var time = double.Parse(timeInMinute);
+                    if (time < 1)
+                    {
+                        TimeInMinute =  1;
+                    }
+                    TimeInMinute = time;
+                }
+                TimeInMinute = 1;
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Get Time Execption!");
+            }
         }
 
         internal void DoJob()
@@ -158,7 +222,7 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
-                    Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute*60000);
+                    Thread.CurrentThread.Join((int)(TimeInMinute * 60000));
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
                     orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
@@ -178,6 +242,7 @@ namespace MetaLive
                 Console.WriteLine("\n{0:HH:mm:ss,fff} scan with {1} centroids arrived", DateTime.Now, scan.CentroidCount);
 
                 //TO THINK: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
+
                 if (!IsMS1Scan(scan))
                 {
                     Console.WriteLine("MS2 Scan arrived.");
@@ -301,7 +366,7 @@ namespace MetaLive
 
         private void CheckTime()
         {
-            Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute*60000);
+            Thread.CurrentThread.Join((int)(TimeInMinute * 60000));
             TimeIsOver = true;
         }
 
@@ -337,14 +402,16 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    if (IsBoxCarScan(scan))
+                    bool isBoxCarScan = IsBoxCarScan(scan);
+
+                    if (isBoxCarScan)
                     {
                         BoxCarScanNum--;
                     }
 
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", IsBoxCarScan(scan));
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
                     if (BoxCarScanNum == 0)
                     {
@@ -372,11 +439,13 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
+                    bool isBoxCarScan = IsBoxCarScan(scan);
+
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", IsBoxCarScan(scan));
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
-                    if (IsBoxCarScan(scan))
+                    if (isBoxCarScan)
                     {
                         BoxCarScanNum--;
                     }
@@ -422,14 +491,35 @@ namespace MetaLive
             string value;
             string valueHigh;
             if (scan.CommonInformation.TryGetValue("LowMass", out value) && scan.CommonInformation.TryGetValue("HighMass", out valueHigh))
-            {   
+            {
                 Console.WriteLine("IsBoxCarScan: " + value + "," + Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString());
+
+                string massRangeCount;
+                if (scan.CommonInformation.TryGetValue("MassRangeCount", out massRangeCount))
+                {
+                    Console.WriteLine("BoxCar Scan Boxes: {0}.", int.Parse(massRangeCount));
+                }
+
                 if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString() && valueHigh == Parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString())
                 {
                     return true;
                 }
             }
             return false;
+
+            //string massRangeCount;
+
+            //if (scan.CommonInformation.TryGetValue("MassRangeCount", out massRangeCount))
+            //{
+            //    Console.WriteLine("BoxCar Scan Boxes: {0}.", int.Parse(massRangeCount));
+
+            //    if (int.Parse(massRangeCount) == Parameters.BoxCarScanSetting.BoxCarBoxes)
+            //    {
+            //        return true;
+            //    }
+            //}
+
+            //return false;
         }
 
         private void DeconvoluteMS1ScanAddMS2Scan(IMsScan scan)
