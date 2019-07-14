@@ -36,8 +36,8 @@ namespace MetaLive
         public int BoxCarResolution { get; set; }
         public int BoxCarAgcTarget { get; set; }
         public int BoxCarNormCharge { get; set; }
-        public int BoxCarMzRangeLowBound { get; set; }
-        public int BoxCarMzRangeHighBound { get; set; }
+        public double BoxCarMzRangeLowBound { get; set; }
+        public double BoxCarMzRangeHighBound { get; set; }
         public int BoxCarMicroScans { get; set; }
 
         //TO DO: The BoxCar Ranges should be optimized based on real data
@@ -81,6 +81,8 @@ namespace MetaLive
 
                 return msxInjectRanges;
             }
+
+            set { }
         }
 
         public string BoxCarMsxInjectTargets
@@ -119,21 +121,89 @@ namespace MetaLive
             }
         }
 
-        public double[] CalculateMsxInjectRanges(double[] mz, double[] intensity)
+        public Tuple<double, double, double>[] SelectRanges(double[] mz, double[] intensity)
+        {
+            List<double> filteredMz = new List<double>();
+            List<double> filteredIntensity = new List<double>();
+            List<double> filteredDistance = new List<double>();
+
+            var theDistance = mz[1] - mz[0];
+
+            int lowInd = Array.BinarySearch(mz, BoxCarMzRangeLowBound);
+            if (lowInd < 0)
+            {
+                lowInd = ~lowInd;
+
+                double firstIntensity = 0;
+                double firstDistance = 0;
+                if (lowInd > 0)
+                {
+                    firstIntensity = (mz[lowInd] - BoxCarMzRangeLowBound) / theDistance * intensity[lowInd - 1];
+                    firstDistance = mz[lowInd] - BoxCarMzRangeLowBound;
+                }
+                else
+                {
+                    firstIntensity = intensity[0];
+                    firstDistance = theDistance;
+                }
+                filteredMz.Add(BoxCarMzRangeLowBound);
+                filteredIntensity.Add(firstIntensity);
+                filteredDistance.Add(firstDistance);
+            }
+
+
+            int highInd = Array.BinarySearch(mz, BoxCarMzRangeHighBound);
+            if (highInd < 0)
+            {
+                highInd = ~highInd;
+            }
+
+            for (int i = lowInd; i < highInd-1; i++)
+            {
+                filteredMz.Add(mz[i]);
+                filteredIntensity.Add(intensity[i]);
+                filteredDistance.Add(theDistance);
+            }
+
+            double lastIntensity = 0;
+            double lastDistance = 0;
+            if (BoxCarMzRangeHighBound - mz[highInd - 1] > theDistance)
+            {
+                lastIntensity = intensity[highInd - 1];
+                lastDistance = theDistance;
+            }
+            else
+            {
+                lastIntensity = (BoxCarMzRangeHighBound - mz[highInd - 1]) / theDistance * intensity[highInd - 1];
+                lastDistance = BoxCarMzRangeHighBound - mz[highInd - 1];
+            }
+            filteredMz.Add(mz[highInd - 1]);
+            filteredIntensity.Add(lastIntensity);
+            filteredDistance.Add(lastDistance);
+
+
+            var tuples = new Tuple<double, double, double>[filteredMz.Count];
+            for (int i = 0; i < filteredMz.Count; i++)
+            {
+                tuples[i] = new Tuple<double, double, double>(filteredMz[i], filteredIntensity[i], filteredDistance[i]);
+            }
+            return tuples;
+
+        }
+
+        public double[] CalculateMsxInjectRanges(Tuple<double, double, double>[] tuples)
         {
             double[] boxInd = new double[BoxCarBoxes*BoxCarScans];
 
-            boxInd[0] = BoxCarMzRangeLowBound;
+            boxInd[0] = BoxCarMzRangeLowBound;           
 
-            var totalIntensity = intensity.Sum();
+            var totalIntensity = tuples.Select(p=>p.Item2).Sum();
 
             var singleIntensity = totalIntensity / (BoxCarBoxes*BoxCarScans);
 
-            var distance = mz[1] - mz[0];
-
             double currentIntensity = 0;
             int ind = 1;
-            for (int i = 0; i < mz.Length; i++)
+            for (int i = 0; i < tuples.Length; i++)
             {
                 if (ind > BoxCarBoxes * BoxCarScans - 1)
                 {
@@ -141,11 +211,11 @@ namespace MetaLive
                 }
                 if (currentIntensity < singleIntensity)
                 {
-                    currentIntensity += intensity[i];
+                    currentIntensity += tuples[i].Item2;
                     if (currentIntensity >= singleIntensity)
                     {
-                        var percetage = ((currentIntensity - singleIntensity) / intensity[i]) * distance;
-                        boxInd[ind] = mz[i - 1] + 5.5 - percetage;
+                        var percetage = ((currentIntensity - singleIntensity) / tuples[i].Item2) * tuples[i].Item3;
+                        boxInd[ind] = tuples[i - 1].Item1 + 5.5 - percetage;
                         ind++;
                         currentIntensity = currentIntensity - singleIntensity;
                     }

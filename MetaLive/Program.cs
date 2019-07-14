@@ -57,7 +57,7 @@ namespace MetaLive
             Console.ReadKey();
         }
 
-        static public Parameters AddParametersFromFile(string filePath)
+        public static Parameters AddParametersFromFile(string filePath)
         {
             Parameters parameters = new Parameters();
 
@@ -73,11 +73,46 @@ namespace MetaLive
 
             parameters = Toml.ReadFile<Parameters>(filePath);
 
+            parameters.BoxCarScanSetting.BoxCarMsxInjectRanges = GenerateBoxCarRanges(parameters);
+
             WriteCurrentParameterFile(filePath, parameters);
 
-            var path = Path.GetDirectoryName(filePath);
-
             return parameters;
+        }
+
+        private static string[] GenerateBoxCarRanges(Parameters parameters)
+        {
+            List<double> mz = new List<double>();
+            List<double> intensity = new List<double>();
+
+            var DataDir = AppDomain.CurrentDomain.BaseDirectory;
+            string filePath_Top = Path.Combine(DataDir, @"Data", @"smooth200.csv");
+            using (StreamReader streamReader = new StreamReader(filePath_Top))
+            {
+                int lineCount = 0;
+                while (streamReader.Peek() >= 0)
+                {
+                    string line = streamReader.ReadLine();
+
+                    lineCount++;
+                    if (lineCount == 1)
+                    {
+                        continue;
+                    }
+
+                    var split = line.Split(',');
+                    mz.Add(double.Parse(split[0]));
+                    intensity.Add(double.Parse(split[1]));
+                }
+            }
+
+            var tuples = parameters.BoxCarScanSetting.SelectRanges(mz.ToArray(), intensity.ToArray());
+
+            var ranges = parameters.BoxCarScanSetting.CalculateMsxInjectRanges(tuples);
+
+            var boxRanges = parameters.BoxCarScanSetting.GenerateMsxInjectRanges(ranges);
+
+            return boxRanges;
         }
 
         private static void WriteCurrentParameterFile(string TrueFileName, Parameters parameters)
