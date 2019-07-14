@@ -28,7 +28,6 @@ namespace MetaLive
     public class BoxCarScanSetting
     {
         public bool BoxCarStatic { get; set; }
-        public bool BoxCarDynamic { get; set; }
         public int BoxCarScans { get; set; }
         public int BoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
@@ -39,6 +38,7 @@ namespace MetaLive
         public double BoxCarMzRangeLowBound { get; set; }
         public double BoxCarMzRangeHighBound { get; set; }
         public int BoxCarMicroScans { get; set; }
+        public double DynamicBlockSize { get; set; }
 
         //TO DO: The BoxCar Ranges should be optimized based on real data
         public string[] BoxCarMsxInjectRanges

@@ -82,6 +82,12 @@ namespace MetaLive
                 AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxNoMS2;
                 Console.WriteLine("AddScanIntoQueueAction = StaticBoxNoMS2.");
             }
+            if (!Parameters.BoxCarScanSetting.BoxCarStatic && !Parameters.MS2ScanSetting.DoMS2)
+            {
+                AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxNoMS2;
+                Console.WriteLine("AddScanIntoQueueAction = DynamicBoxNoMS2.");
+
+            }
         }
 
         Parameters Parameters { get; set; }
@@ -289,7 +295,7 @@ namespace MetaLive
                                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mass_Charges.First());
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
-                                        if (Parameters.BoxCarScanSetting.BoxCarDynamic)
+                                        if (!Parameters.BoxCarScanSetting.BoxCarStatic)
                                         {
                                             BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
                                         }
@@ -342,7 +348,7 @@ namespace MetaLive
             }
             catch (Exception)
             {
-                Console.WriteLine("AddScanIntoQueue Exception!");
+                Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
             }
         }
 
@@ -378,7 +384,7 @@ namespace MetaLive
             }
             catch (Exception)
             {
-                Console.WriteLine("AddScanIntoQueue Exception!");
+                Console.WriteLine("AddScanIntoQueue_StaticBoxNoMS2 Exception!");
             }
         }
 
@@ -419,7 +425,48 @@ namespace MetaLive
             }
             catch (Exception)
             {
-                Console.WriteLine("AddScanIntoQueue Exception!");
+                Console.WriteLine("AddScanIntoQueue_StaticBoxMS2FromFullScan Exception!");
+            }
+        }
+
+        private void AddScanIntoQueue_DynamicBoxNoMS2(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    bool isBoxCarScan = IsBoxCarScan(scan);
+
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
+
+                    if (!isBoxCarScan)
+                    {
+                        //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
+                        var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
+                        lock (lockerScan)
+                        {
+                            if (dynamicRanges.Count!=0)
+                            {
+                                var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                newDefinedScan.dynamicBox = dynamicRanges;
+                                UserDefinedScans.Enqueue(newDefinedScan);
+                            }
+                            else
+                            {
+                                //If no dynamic box scan placed, place static box scan.
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                            }
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("AddScanIntoQueue_DynamicBoxNoMS2 Exception!");
             }
         }
 
@@ -578,6 +625,15 @@ namespace MetaLive
                     }
                 }
             }
+        }
+
+        private List<double> DeconvoluateDynamicBoxRange(IMsScan scan)
+        {
+            List<double> dynamicRange = new List<double>();
+
+            //Fill with function.
+
+            return dynamicRange;
         }
 
     }

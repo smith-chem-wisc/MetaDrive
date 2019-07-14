@@ -8,7 +8,6 @@ AGC_Mode = 1
 
 [BoxCarScanSetting]
 BoxCarStatic = true
-BoxCarDynamic = false
 BoxCarScans = 2
 BoxCarBoxes = 12
 BoxCarOverlap = 1
@@ -16,9 +15,10 @@ BoxCarMaxInjectTimeInMillisecond = 60
 BoxCarResolution = 120000
 BoxCarAgcTarget = 500000
 BoxCarNormCharge = 2
-BoxCarMzRangeLowBound = 400
-BoxCarMzRangeHighBound = 1200
+BoxCarMzRangeLowBound = 400.0
+BoxCarMzRangeHighBound = 1200.0
 BoxCarMicroScans = 1
+DynamicBlockSize = 5.0
 
 [FullScanSetting]
 MaxInjectTimeInMillisecond = 20
