@@ -118,6 +118,84 @@ namespace MetaLive
                 return msxInjectMaxITs;
             }
         }
+
+        public double[] CalculateMsxInjectRanges(double[] mz, double[] intensity)
+        {
+            double[] boxInd = new double[BoxCarBoxes*BoxCarScans];
+
+            boxInd[0] = BoxCarMzRangeLowBound;
+
+            var totalIntensity = intensity.Sum();
+
+            var singleIntensity = totalIntensity / (BoxCarBoxes*BoxCarScans);
+
+            var distance = mz[1] - mz[0];
+
+            double currentIntensity = 0;
+            int ind = 1;
+            for (int i = 0; i < mz.Length; i++)
+            {
+                if (ind > BoxCarBoxes * BoxCarScans - 1)
+                {
+                    break;
+                }
+                if (currentIntensity < singleIntensity)
+                {
+                    currentIntensity += intensity[i];
+                    if (currentIntensity >= singleIntensity)
+                    {
+                        var percetage = ((currentIntensity - singleIntensity) / intensity[i]) * distance;
+                        boxInd[ind] = mz[i - 1] + 5.5 - percetage;
+                        ind++;
+                        currentIntensity = currentIntensity - singleIntensity;
+                    }
+                }           
+            }
+
+            return boxInd;
+        }
+
+        public string[] GenerateMsxInjectRanges(double[] boxInd)
+        {
+            var msxInjectRanges = new string[BoxCarScans];
+
+            for (int i = 0; i < BoxCarScans; i++)
+            {
+                msxInjectRanges[i] = "[";
+                for (int j = 0; j < BoxCarBoxes; j++)
+                {
+                    msxInjectRanges[i] += "(";
+                    var lbox = boxInd[j*BoxCarScans + i] - (double)BoxCarOverlap / 2;
+                    if (j == 0 && i==0)
+                    {
+                        lbox += (double)BoxCarOverlap / 2;
+                    }
+                    msxInjectRanges[i] += lbox.ToString("0.0");
+
+                    msxInjectRanges[i] += ",";
+
+                    double rbox = 0; 
+                    if (j == BoxCarBoxes - 1 && i == BoxCarScans-1)
+                    {
+                        rbox = BoxCarMzRangeHighBound;
+                    }
+                    else
+                    {
+                        rbox = boxInd[j * BoxCarScans + i + 1] + (double)BoxCarOverlap / 2;
+                    }
+                    msxInjectRanges[i] += rbox.ToString("0.0");
+
+                    msxInjectRanges[i] += ")";
+                    if (j != BoxCarBoxes - 1)
+                    {
+                        msxInjectRanges[i] += ",";
+                    }
+                }
+                msxInjectRanges[i] += "]";
+            }
+
+            return msxInjectRanges;
+        }
     }
 
     public class FullScanSetting
