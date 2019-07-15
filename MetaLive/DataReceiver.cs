@@ -631,7 +631,8 @@ namespace MetaLive
         {
             List<double> dynamicRange = new List<double>();
 
-            //Fill with function.
+            //TO DO: Finish the function.
+
 
             return dynamicRange;
         }

@@ -86,7 +86,7 @@ namespace MetaLive
             List<double> intensity = new List<double>();
 
             var DataDir = AppDomain.CurrentDomain.BaseDirectory;
-            string filePath_Top = Path.Combine(DataDir, @"Data", @"smooth200.csv");
+            string filePath_Top = Path.Combine(DataDir, @"Data", @"topdown.csv");
             using (StreamReader streamReader = new StreamReader(filePath_Top))
             {
                 int lineCount = 0;

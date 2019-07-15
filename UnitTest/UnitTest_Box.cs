@@ -48,7 +48,7 @@ namespace UnitTest
         {
             List<double> mz = new List<double>();
             List<double> intensity = new List<double>();
-            string filePath=Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data\smooth200.csv");
+            string filePath=Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data\topdown.csv");
             using (StreamReader streamReader = new StreamReader(filePath))
             {
                 int lineCount = 0;
@@ -90,6 +90,42 @@ namespace UnitTest
             var boxRanges2 = boxCarScanSetting2.GenerateMsxInjectRanges(ranges2);
             Assert.That(boxRanges2[0] == "[(550.0,572.3),(595.3,615.8),(634.6,652.4),(669.4,685.9),(702.1,718.0),(733.8,749.6),(765.6,781.9),(799.0,817.4),(837.4,859.0),(883.5,912.2),(946.5,990.4),(1050.2,1149.1)]");
 
+        }
+
+        [Test]
+        public static void test_generateMsxInjectRanges2()
+        {
+            List<double> mz = new List<double>();
+            List<double> intensity = new List<double>();
+            string filePath = Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data\smooth_bt.csv");
+            using (StreamReader streamReader = new StreamReader(filePath))
+            {
+                int lineCount = 0;
+                while (streamReader.Peek() >= 0)
+                {
+                    string line = streamReader.ReadLine();
+
+                    lineCount++;
+                    if (lineCount == 1)
+                    {
+                        continue;
+                    }
+
+                    var split = line.Split(',');
+                    mz.Add(double.Parse(split[0]));
+                    intensity.Add(double.Parse(split[1]));
+                }
+            }
+
+            BoxCarScanSetting boxCarScanSetting = new BoxCarScanSetting();
+            boxCarScanSetting.BoxCarScans = 2;
+            boxCarScanSetting.BoxCarBoxes = 12;
+            boxCarScanSetting.BoxCarMzRangeLowBound = 400;
+            boxCarScanSetting.BoxCarMzRangeHighBound = 1200;
+            var tuples = boxCarScanSetting.SelectRanges(mz.ToArray(), intensity.ToArray());
+            var ranges = boxCarScanSetting.CalculateMsxInjectRanges(tuples);
+            var boxRanges = boxCarScanSetting.GenerateMsxInjectRanges(ranges);
+            Assert.That(boxRanges[0] == "[(400.0,403.5),(415.2,427.0),(439.0,451.4),(464.3,477.8),(491.9,506.7),(522.3,538.7),(555.8,573.8),(592.6,612.5),(634.0,657.9),(685.5,718.4),(758.4,807.6),(868.0,956.6)]");
         }
     }
 }

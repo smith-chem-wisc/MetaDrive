@@ -172,7 +172,7 @@
     <None Include="Data\Parameters.toml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\smooth200.csv">
+    <None Include="Data\topdown.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
