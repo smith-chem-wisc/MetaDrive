@@ -1,7 +1,7 @@
 [GeneralSetting]
 TestMod = false
 MethodType = "StaticBoxCar"
-TotalTimeInMinute = 5
+TotalTimeInMinute = 150
 IsBottomUp = true
 Polarity = 0
 SourceCID = 0
@@ -11,7 +11,7 @@ AGC_Mode = 1
 BoxCarScans = 2
 BoxCarBoxes = 12
 BoxCarOverlap = 1
-BoxCarMaxInjectTimeInMillisecond = 60
+BoxCarMaxInjectTimeInMillisecond = 252
 BoxCarResolution = 120000
 BoxCarAgcTarget = 500000
 BoxCarNormCharge = 2
@@ -32,10 +32,10 @@ Microscans = 1
 TopN = 5
 DynamicExclusion = true
 ExclusionDuration = 30
-IsolationWindow = 1.25
+IsolationWindow = 0.7
 NormCharge = 2
 MinCharge = 2
-MaxCharge = 6
+MaxCharge = 5
 IntensityThreshold = 0
 
 [MS2ScanSetting]

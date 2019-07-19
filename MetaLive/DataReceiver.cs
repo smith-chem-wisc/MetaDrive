@@ -51,15 +51,7 @@ namespace MetaLive
         bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
         bool TimeIsOver = false;
-        double TimeInMinute
-        {
-            get
-            {
-                Console.WriteLine("Accqusition time = {0)", Parameters.GeneralSetting.TotalTimeInMinute);
-                return (double)Parameters.GeneralSetting.TotalTimeInMinute;
-            }
-            set { }
-        }
+
         static object lockerExclude = new object();
         static object lockerScan = new object();
 
@@ -108,7 +100,7 @@ namespace MetaLive
 
             while(!isTakeOver)
             {
-                Thread.Sleep(300);
+                Thread.Sleep(100);
                 Console.WriteLine("Connected. Listening...");
             }
             Console.WriteLine("Detect Start Signal!");
@@ -140,9 +132,12 @@ namespace MetaLive
                         Console.WriteLine("Instrument take over Scan by IAPI is dectected.");                      
                         isTakeOver = true;
 
-                        Console.WriteLine("Instrument take over duration time: {0}", TimeInMinute);
+                        Console.WriteLine("Instrument take over duration time: {0}", Parameters.GeneralSetting.TotalTimeInMinute);
 
                         FullScan.PlaceFullScan(m_scans, Parameters);
+
+                        Console.WriteLine("Place the first Full scan after Instrument take over.");
+
                     }
                 }
             }
@@ -183,7 +178,7 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
-                    Thread.CurrentThread.Join((int)(TimeInMinute * 60000));
+                    Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute * 60000);
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
                     orbitrap.AcquisitionStreamClosing -= Orbitrap_AcquisitionStreamClosing;
@@ -301,11 +296,11 @@ namespace MetaLive
                                     case UserDefinedScanType.BoxCarScan:
                                         if (Parameters.GeneralSetting.MethodType == MethodTypes.StaticBoxCar)
                                         {
-                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
+                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
                                         }
                                         else
                                         {
-                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
+                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
                                         }
                                         break;
                                     default:
@@ -327,7 +322,7 @@ namespace MetaLive
 
         private void CheckTime()
         {
-            Thread.CurrentThread.Join((int)(TimeInMinute * 60000));
+            Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute * 60000);
             TimeIsOver = true;
         }
 
@@ -368,16 +363,16 @@ namespace MetaLive
 
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
-
-                    if (isBoxCarScan)
-                    {
-                        BoxCarScanNum--;
-                    }
+                    Console.WriteLine("In StaticBox method, MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
                     if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
                     {
                         DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
+                    }
+
+                    if (isBoxCarScan)
+                    {
+                        BoxCarScanNum--;
                     }
 
                     if (BoxCarScanNum == 0)
