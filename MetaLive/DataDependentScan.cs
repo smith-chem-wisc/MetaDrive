@@ -11,7 +11,7 @@ namespace MetaLive
 {
     public class DataDependentScan
     {
-        public static void PlaceMS2Scan(IScans m_scans, Parameters parameters, Tuple<double, int> mass_charge)
+        public static void PlaceMS2Scan(IScans m_scans, Parameters parameters, double mz)
         {
             if (m_scans.PossibleParameters.Length == 0)
             {
@@ -19,8 +19,8 @@ namespace MetaLive
             }
 
             double Range = parameters.MS1IonSelecting.IsolationWindow;
-            string xl = (mass_charge.Item1.ToMz(mass_charge.Item2) - Range).ToString("0.000");
-            string xh = (mass_charge.Item1.ToMz(mass_charge.Item2) + Range).ToString("0.000");            
+            string xl = (mz - Range).ToString("0.000");
+            string xh = (mz + Range).ToString("0.000");            
             ICustomScan scan = m_scans.CreateCustomScan();
 
             scan.Values["FirstMass"] = parameters.MS2ScanSetting.MS2MzRangeLowBound.ToString();

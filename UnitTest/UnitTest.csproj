@@ -21,6 +21,9 @@
     <None Update="20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Data\013119_JeKoHLAI_tryptic_NCE203040_45min.mzML">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Data\smooth_bt.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -67,7 +67,7 @@ namespace UnitTest
         }
 
         [Test]
-        public static void Test_RealData()
+        public static void Test_RealDataDeconv()
         {            
             string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, "20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML");
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);

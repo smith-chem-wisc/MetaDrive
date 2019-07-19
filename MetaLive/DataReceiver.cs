@@ -292,7 +292,7 @@ namespace MetaLive
                                         FullScan.PlaceFullScan(m_scans, Parameters);
                                         break;
                                     case UserDefinedScanType.DataDependentScan:
-                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mass_Charges.First());
+                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
                                         if (!Parameters.BoxCarScanSetting.BoxCarStatic)
@@ -547,7 +547,6 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        //TO DO: DynamicExclusion for Top-down has different logic.
                         if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
                         {
                             var dataTime = DateTime.Now;
@@ -556,8 +555,7 @@ namespace MetaLive
 
                             var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
-                            //TO DO: get the best Mz.
-                            theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
+                            theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
                             lock (lockerScan)
                             {
                                 UserDefinedScans.Enqueue(theScan);
@@ -605,7 +603,6 @@ namespace MetaLive
 
                 lock (lockerExclude)
                 {
-                    //TO DO: DynamicExclusion for Top-down has different logic.
                     if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
                     {
                         var dataTime = DateTime.Now;
@@ -615,7 +612,7 @@ namespace MetaLive
                         var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
                         //TO DO: get the best Mz.
-                        theScan.Mass_Charges.Add(new Tuple<double, int>(iso.monoisotopicMass, iso.charge));
+                        theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
                         lock (lockerScan)
                         {
                             UserDefinedScans.Enqueue(theScan);
@@ -635,6 +632,53 @@ namespace MetaLive
 
 
             return dynamicRange;
+        }
+
+        private void DeconvoluteAndFindFeatures(IMsScan scan)
+        {
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum", DateTime.Now);
+
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderBy(p=>p.monoisotopicMass).ToArray();
+
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
+
+            var features = FeatureFinder.ExtractGlycoMS1features(IsotopicEnvelopes);
+
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, features.Count());
+
+            if (features.Count() > 0)
+            {
+                int topN = 0;
+                foreach (var iso in features)
+                {
+                    if (topN >= Parameters.MS1IonSelecting.TopN)
+                    {
+                        break;
+                    }
+                    lock (lockerExclude)
+                    {
+                        if (DynamicExclusionList.isNotInExclusionList(iso.Key, 1.25))
+                        {
+                            var dataTime = DateTime.Now;
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.Key, iso.Value, dataTime));
+                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                            theScan.Mz = iso.Key.ToMz(iso.Value);
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(theScan);
+                                Console.WriteLine("dataDependentScans increased.");
+                            }
+                            topN++;
+                        }
+                    }
+                }
+            }
+
         }
 
     }

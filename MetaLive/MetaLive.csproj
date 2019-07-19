@@ -148,6 +148,7 @@
     <Compile Include="DataReceiver.cs" />
     <Compile Include="Deconvolution\DeconvolutionParameter.cs" />
     <Compile Include="DynamicExclusionList.cs" />
+    <Compile Include="FeatureFinder.cs" />
     <Compile Include="FullScan.cs" />
     <Compile Include="MassAcceptor\AllowedIntervalWithNotch.cs" />
     <Compile Include="MassAcceptor\MassDiffAcceptor.cs" />
