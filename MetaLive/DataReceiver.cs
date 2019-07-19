@@ -71,22 +71,26 @@ namespace MetaLive
             DynamicExclusionList = new DynamicExclusionList();
             BoxDynamic = new Queue<double>();
 
-            if (Parameters.BoxCarScanSetting.BoxCarStatic && Parameters.MS2ScanSetting.DoMS2)
+            switch (Parameters.GeneralSetting.MethodType)
             {
-                AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxMS2FromFullScan;
-                Console.WriteLine("AddScanIntoQueueAction = StaticBoxMS2FromFullScan.");
-
-            }
-            if (Parameters.BoxCarScanSetting.BoxCarStatic && !Parameters.MS2ScanSetting.DoMS2)
-            {
-                AddScanIntoQueueAction = AddScanIntoQueue_StaticBoxNoMS2;
-                Console.WriteLine("AddScanIntoQueueAction = StaticBoxNoMS2.");
-            }
-            if (!Parameters.BoxCarScanSetting.BoxCarStatic && !Parameters.MS2ScanSetting.DoMS2)
-            {
-                AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxNoMS2;
-                Console.WriteLine("AddScanIntoQueueAction = DynamicBoxNoMS2.");
-
+                case MethodTypes.Shutgun:
+                    AddScanIntoQueueAction = AddScanIntoQueue_BottomUp;
+                    Console.WriteLine("AddScanIntoQueueAction = BottomUp.");
+                    break;
+                case MethodTypes.StaticBoxCar:
+                    AddScanIntoQueueAction = AddScanIntoQueue_StaticBox;
+                    Console.WriteLine("AddScanIntoQueueAction = StaticBox.");
+                    break;
+                case MethodTypes.DynamicBoxCar:
+                    AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxNoMS2;
+                    Console.WriteLine("AddScanIntoQueueAction = DynamicBox.");
+                    break;
+                case MethodTypes.GlycoFeature:
+                    AddScanIntoQueueAction = AddScanIntoQueue_Glyco;
+                    Console.WriteLine("AddScanIntoQueueAction = Glyco.");
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -295,7 +299,7 @@ namespace MetaLive
                                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
-                                        if (!Parameters.BoxCarScanSetting.BoxCarStatic)
+                                        if (Parameters.GeneralSetting.MethodType == MethodTypes.StaticBoxCar)
                                         {
                                             BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
                                         }
@@ -352,44 +356,8 @@ namespace MetaLive
             }
         }
 
-        private void AddScanIntoQueue_StaticBoxNoMS2(IMsScan scan)
-        {
-            try
-            {
-                //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                {
-                    bool isBoxCarScan = IsBoxCarScan(scan);
-
-                    if (isBoxCarScan)
-                    {
-                        BoxCarScanNum--;
-                    }
-
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
-
-                    if (BoxCarScanNum == 0)
-                    {
-                        lock (lockerScan)
-                        {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                        }
-                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
-                    }
-
-                }
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("AddScanIntoQueue_StaticBoxNoMS2 Exception!");
-            }
-        }
-
         //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans.
-        private void AddScanIntoQueue_StaticBoxMS2FromFullScan(IMsScan scan)
+        private void AddScanIntoQueue_StaticBox(IMsScan scan)
         {
             try
             {
@@ -406,7 +374,8 @@ namespace MetaLive
                     {
                         BoxCarScanNum--;
                     }
-                    else
+
+                    if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
                     {
                         DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
                     }
@@ -467,6 +436,31 @@ namespace MetaLive
             catch (Exception)
             {
                 Console.WriteLine("AddScanIntoQueue_DynamicBoxNoMS2 Exception!");
+            }
+        }
+
+        private void AddScanIntoQueue_Glyco(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
+
+                    DeconvoluteAndFindGlycoFeatures(scan);
+
+                    lock (lockerScan)
+                    {
+                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
             }
         }
 
@@ -634,7 +628,7 @@ namespace MetaLive
             return dynamicRange;
         }
 
-        private void DeconvoluteAndFindFeatures(IMsScan scan)
+        private void DeconvoluteAndFindGlycoFeatures(IMsScan scan)
         {
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
 
@@ -648,6 +642,7 @@ namespace MetaLive
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, features.Count());
 
+            //TO DO: if features.Count < topN, place random 5 scans.
             if (features.Count() > 0)
             {
                 int topN = 0;

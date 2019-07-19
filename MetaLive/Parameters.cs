@@ -6,6 +6,14 @@ using System.Threading.Tasks;
 
 namespace MetaLive
 {
+    public enum MethodTypes
+    {
+        Shutgun = 0,
+        StaticBoxCar = 1,
+        DynamicBoxCar = 2,
+        GlycoFeature = 3     
+    }
+
     public class Parameters
     {
         public GeneralSetting GeneralSetting { get; set; }
@@ -18,6 +26,7 @@ namespace MetaLive
     public class GeneralSetting
     {
         public bool TestMod { get; set; }
+        public MethodTypes MethodType { get; set; }
         public int TotalTimeInMinute { get; set; }
         public bool IsBottomUp { get; set; }
         public int Polarity { get; set; }
@@ -27,7 +36,6 @@ namespace MetaLive
 
     public class BoxCarScanSetting
     {
-        public bool BoxCarStatic { get; set; }
         public int BoxCarScans { get; set; }
         public int BoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
