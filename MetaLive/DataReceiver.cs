@@ -239,16 +239,18 @@ namespace MetaLive
 
                     DateTime dateTime = DateTime.Now;
 
-                    //Console.WriteLine("Check the dynamic exclusionList.");
+                    Console.WriteLine("Check the dynamic exclusionList.");
 
                     lock (lockerExclude)
                     {
-                        for (int i = 0; i < DynamicExclusionList.exclusionList.Count; i++)
+                        bool toDeque = true;
+
+                        while (toDeque && DynamicExclusionList.exclusionList.Count >0)
                         {
-                            if ((dateTime - DynamicExclusionList.exclusionList.Peek().Item3).Seconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
+                            if (dateTime.Subtract(DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
                             {
-                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}", dateTime, DynamicExclusionList.exclusionList.Peek().Item2);
-                                break;
+                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, DynamicExclusionList.exclusionList.Peek().Item3);
+                                toDeque = false;
                             }
                             else
                             {
