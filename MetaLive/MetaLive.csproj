@@ -150,6 +150,7 @@
     <Compile Include="DynamicExclusionList.cs" />
     <Compile Include="FeatureFinder.cs" />
     <Compile Include="FullScan.cs" />
+    <Compile Include="IsotopesForGlycoFeature.cs" />
     <Compile Include="MassAcceptor\AllowedIntervalWithNotch.cs" />
     <Compile Include="MassAcceptor\MassDiffAcceptor.cs" />
     <Compile Include="Deconvolution\MzSpectrumBU.cs" />

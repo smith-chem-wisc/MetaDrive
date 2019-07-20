@@ -48,12 +48,14 @@ namespace MetaLive
 
         bool isTakeOver = false;
         bool dynamicExclude = true;
+        bool glycoInclude = true;
         bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
         bool TimeIsOver = false;
 
         static object lockerExclude = new object();
         static object lockerScan = new object();
+        static object lockerGlyco = new object();
 
         internal DataReceiver(Parameters parameters)
         {
@@ -61,7 +63,7 @@ namespace MetaLive
             DeconvolutionParameter = new DeconvolutionParameter();
             UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
-            BoxDynamic = new Queue<double>();
+            IsotopesForGlycoFeature = new IsotopesForGlycoFeature();
 
             switch (Parameters.GeneralSetting.MethodType)
             {
@@ -90,7 +92,7 @@ namespace MetaLive
         DeconvolutionParameter DeconvolutionParameter { get; set; }
         Queue<UserDefinedScan> UserDefinedScans { get; set; }
         DynamicExclusionList DynamicExclusionList { get; set; }
-        Queue<double> BoxDynamic { get; set; }
+        IsotopesForGlycoFeature IsotopesForGlycoFeature { get; set; } 
 
         public Action<IMsScan> AddScanIntoQueueAction { get; set; }
 
@@ -165,6 +167,13 @@ namespace MetaLive
             childThreadPlaceScan.Start();
             Console.WriteLine("Start Thread for Place Scan!");
 
+            if (Parameters.GeneralSetting.MethodType == MethodTypes.GlycoFeature)
+            {
+                Thread childThreadGlycoInclusionList = new Thread(IsotopesForGlycoFeatureDeque);
+                childThreadGlycoInclusionList.IsBackground = true;
+                childThreadGlycoInclusionList.Start();
+                Console.WriteLine("Start Thread for glyco Inclusion list!");
+            }
 
 
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
@@ -223,6 +232,7 @@ namespace MetaLive
         private void Orbitrap_AcquisitionStreamClosing(object sender, EventArgs e)
 		{
             dynamicExclude = false;
+            glycoInclude = false;
             placeUserDefinedScan = false;
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream closed (end of method)");            
@@ -267,6 +277,46 @@ namespace MetaLive
             catch (Exception)
             {
                 Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+            }
+        }
+
+        private void IsotopesForGlycoFeatureDeque()
+        {
+            try
+            {
+                //TO DO: should I use spining or blocking
+                while (glycoInclude)
+                {
+                    Thread.Sleep(300);
+
+                    DateTime dateTime = DateTime.Now;
+
+                    lock (lockerGlyco)
+                    {
+                        bool toDeque = true;
+
+                        while (toDeque && IsotopesForGlycoFeature.isotopeList.Count > 0)
+                        {
+                            if (dateTime.Subtract(IsotopesForGlycoFeature.isotopeList.Peek().Item2).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
+                            {
+                                Console.WriteLine("The glyco isotopeList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, IsotopesForGlycoFeature.isotopeList.Peek().Item2);
+                                toDeque = false;
+                            }
+                            else
+                            {
+
+                                IsotopesForGlycoFeature.isotopeList.Dequeue();
+                                Console.WriteLine("{0:HH:mm:ss,fff} Glyco isotopeList Dequeue: {1}", dateTime, IsotopesForGlycoFeature.isotopeList.Count);
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Glyco isotopeList Exception!");
             }
         }
 
@@ -635,17 +685,31 @@ namespace MetaLive
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
 
-            var features = FeatureFinder.ExtractGlycoMS1features(IsotopicEnvelopes);
+            NeuCodeIsotopicEnvelop[] allIsotops;
+
+            lock (lockerGlyco)
+            {
+                var dataTime = DateTime.Now;
+                foreach (var isotop in IsotopicEnvelopes)
+                {
+                    IsotopesForGlycoFeature.isotopeList.Enqueue(new Tuple<NeuCodeIsotopicEnvelop, DateTime>(isotop, dataTime));
+                }
+
+                allIsotops = IsotopesForGlycoFeature.isotopeList.Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
+            }
+
+            var features = FeatureFinder.ExtractGlycoMS1features(allIsotops);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, features.Count());
 
             //TO DO: if features.Count < topN, place random 5 scans.
+            int topN = 0;
             if (features.Count() > 0)
             {
-                int topN = 0;
+                
                 foreach (var iso in features)
                 {
-                    if (topN >= Parameters.MS1IonSelecting.TopN)
+                    if (topN >= Parameters.GlycoSetting.TopN)
                     {
                         break;
                     }
@@ -660,6 +724,36 @@ namespace MetaLive
                             var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
                             theScan.Mz = iso.Key.ToMz(iso.Value);
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(theScan);
+                                Console.WriteLine("dataDependentScans increased.");
+                            }
+                            topN++;
+                        }
+                    }
+                }
+            }
+
+            if (topN < Parameters.MS1IonSelecting.TopN && IsotopicEnvelopes.Count() > 0)
+            {
+                foreach (var iso in IsotopicEnvelopes)
+                {
+                    if (topN >= Parameters.MS1IonSelecting.TopN)
+                    {
+                        break;
+                    }
+                    lock (lockerExclude)
+                    {
+                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                        {
+                            var dataTime = DateTime.Now;
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                            theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
                             lock (lockerScan)
                             {
                                 UserDefinedScans.Enqueue(theScan);

@@ -18,9 +18,14 @@ namespace MetaLive
         //To use this function, the input neuCodeIsotopicEnvelops has to be ordered already by monoisotopicMass
         public static Dictionary<double, int> ExtractGlycoMS1features(NeuCodeIsotopicEnvelop[] neuCodeIsotopicEnvelops)
         {
-            var masses = neuCodeIsotopicEnvelops.Select(p => p.monoisotopicMass).ToArray();
-
             Dictionary<double, int> glycanCandidates = new Dictionary<double, int>();
+
+            if (neuCodeIsotopicEnvelops.Length == 0)
+            {
+                return glycanCandidates;
+            }
+
+            var masses = neuCodeIsotopicEnvelops.Select(p => p.monoisotopicMass).ToArray();
 
             //Parallel doesn't help.
             for (int i = 0; i < masses.Length; i++)

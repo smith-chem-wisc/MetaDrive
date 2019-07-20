@@ -48,3 +48,7 @@ MS2AgcTarget = 100000
 MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800
 MS2MicroScans = 1
+
+[GlycoSetting]
+InclusionDuration = 30
+TopN = 15

@@ -21,6 +21,7 @@ namespace MetaLive
         public FullScanSetting FullScanSetting { get; set; }
         public MS1IonSelecting MS1IonSelecting { get; set; }
         public MS2ScanSetting MS2ScanSetting { get; set; }
+        public GlycoSetting GlycoSetting { get; set; }
     }
 
     public class GeneralSetting
@@ -309,5 +310,11 @@ namespace MetaLive
         public int MS2MzRangeLowBound { get; set; }
         public int MS2MzRangeHighBound { get; set; }
         public int MS2MicroScans { get; set; }
+    }
+
+    public class GlycoSetting
+    {
+        public int InclusionDuration { get; set; }
+        public int TopN { get; set; }
     }
 }
