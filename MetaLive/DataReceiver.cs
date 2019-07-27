@@ -67,9 +67,9 @@ namespace MetaLive
 
             switch (Parameters.GeneralSetting.MethodType)
             {
-                case MethodTypes.Shutgun:
-                    AddScanIntoQueueAction = AddScanIntoQueue_BottomUp;
-                    Console.WriteLine("AddScanIntoQueueAction = BottomUp.");
+                case MethodTypes.ShotGun:
+                    AddScanIntoQueueAction = AddScanIntoQueue_ShotGun;
+                    Console.WriteLine("AddScanIntoQueueAction = ShotGun.");
                     break;
                 case MethodTypes.StaticBoxCar:
                     AddScanIntoQueueAction = AddScanIntoQueue_StaticBox;
@@ -378,7 +378,7 @@ namespace MetaLive
             TimeIsOver = true;
         }
 
-        private void AddScanIntoQueue_BottomUp(IMsScan scan)
+        private void AddScanIntoQueue_ShotGun(IMsScan scan)
         {
             try
             {   
@@ -389,7 +389,7 @@ namespace MetaLive
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
-                    DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
+                    DeconvoluteMS1ScanAddMS2Scan(scan);
 
                     lock (lockerScan)
                     {
@@ -610,20 +610,12 @@ namespace MetaLive
 
         }
 
-        //This deconvolution only deconvolute TopN peaks to generate MS2 scans. Deconvolute one peak, add one MS2 scan. 
-        //There is no need to wait to deconvolute all peaks and then add all MS2 scans. 
-        //In theory, this should reduce the time for deconvolute all peaks.
-        private void DeconvoluteMS1ScanAddMS2Scan_TopN(IMsScan scan)
+        private int DeconvolutePeakByIntensity(MzSpectrumBU spectrum, IEnumerable<int> indexByY, HashSet<double> seenPeaks, int topN)
         {
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
-
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-
-            HashSet<double> seenPeaks = new HashSet<double>();
-            int topN = 0;
-            foreach (var peakIndex in spectrum.ExtractIndicesByY())
+            int theTopN = 0;
+            foreach (var peakIndex in indexByY)
             {
-                if (topN >= Parameters.MS1IonSelecting.TopN)
+                if (theTopN >= topN)
                 {
                     break;
                 }
@@ -659,10 +651,25 @@ namespace MetaLive
                             UserDefinedScans.Enqueue(theScan);
                             Console.WriteLine("dataDependentScans increased.");
                         }
-                        topN++;
+                        theTopN++;
                     }
                 }
             }
+            return theTopN;
+        }
+
+        //This deconvolution only deconvolute TopN peaks to generate MS2 scans. Deconvolute one peak, add one MS2 scan. 
+        //There is no need to wait to deconvolute all peaks and then add all MS2 scans. 
+        //In theory, this should reduce the time for deconvolute all peaks.
+        private void DeconvoluteMS1ScanAddMS2Scan_TopN(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
+
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            HashSet<double> seenPeaks = new HashSet<double>();
+            var indexByY = spectrum.ExtractIndicesByY();
+
+            DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
 
         private List<double> DeconvoluateDynamicBoxRange(IMsScan scan)
@@ -675,13 +682,19 @@ namespace MetaLive
             return dynamicRange;
         }
 
-        private void DeconvoluteAndFindGlycoFeatures(IMsScan scan)
+        private int DeconvolutePeakByGlycoFamily(MzSpectrumBU spectrum)
         {
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderBy(p => p.monoisotopicMass).ToArray();
 
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum", DateTime.Now);
-
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderBy(p=>p.monoisotopicMass).ToArray();
+            HashSet<double> massInThisScan = new HashSet<double>();
+            var masses = IsotopicEnvelopes.Select(p => p.monoisotopicMass).ToArray();
+            for (int i = 0; i < masses.Length; i++)
+            {
+                if (!massInThisScan.Contains(masses[i]))
+                {
+                    massInThisScan.Add(masses[i]);
+                }
+            }
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -698,18 +711,27 @@ namespace MetaLive
                 allIsotops = IsotopesForGlycoFeature.isotopeList.Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
             }
 
-            var features = FeatureFinder.ExtractGlycoMS1features(allIsotops);
+            var allFeatures = FeatureFinder.ExtractGlycoMS1features(allIsotops);
+            var features = new Dictionary<double, int>();
+            foreach (var f in allFeatures)
+            {
+                if (massInThisScan.Contains(f.Key))
+                {
+                    features.Add(f.Key, f.Value);
+                }
+            }
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, features.Count());
 
-            //TO DO: if features.Count < topN, place random 5 scans.
-            int topN = 0;
+
+            int placedGlycoFeature = 0;
             if (features.Count() > 0)
             {
-                
+                Console.WriteLine("Find feature: {0}", features.Count());
+
                 foreach (var iso in features)
                 {
-                    if (topN >= Parameters.GlycoSetting.TopN)
+                    if (placedGlycoFeature >= Parameters.GlycoSetting.TopN)
                     {
                         break;
                     }
@@ -729,40 +751,34 @@ namespace MetaLive
                                 UserDefinedScans.Enqueue(theScan);
                                 Console.WriteLine("dataDependentScans increased.");
                             }
-                            topN++;
+                            placedGlycoFeature++;
                         }
                     }
                 }
             }
 
-            if (topN < Parameters.MS1IonSelecting.TopN && IsotopicEnvelopes.Count() > 0)
-            {
-                foreach (var iso in IsotopicEnvelopes)
-                {
-                    if (topN >= Parameters.MS1IonSelecting.TopN)
-                    {
-                        break;
-                    }
-                    lock (lockerExclude)
-                    {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+            return placedGlycoFeature;
+        }
 
-                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+        private void DeconvoluteAndFindGlycoFeatures(IMsScan scan)
+        {
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
 
-                            theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(theScan);
-                                Console.WriteLine("dataDependentScans increased.");
-                            }
-                            topN++;
-                        }
-                    }
-                }
+            //Place 2 random scan first.
+            HashSet<double> seenPeaks = new HashSet<double>();
+            var indexByY = spectrum.ExtractIndicesByY();
+            int scanPlaced = 0;
+            scanPlaced = DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, 2);
+
+            //Deconvolute whole scan and contrust glycofamily
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum for glycofamily", DateTime.Now);
+            var placedGlycoFeature = DeconvolutePeakByGlycoFamily(spectrum);
+
+            //features.Count < topN, place random x scans.
+            int left = Parameters.MS1IonSelecting.TopN - 2 - placedGlycoFeature;
+            if (left > 0)
+            {               
+                DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, left);
             }
 
         }

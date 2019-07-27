@@ -8,7 +8,7 @@ namespace MetaLive
 {
     public enum MethodTypes
     {
-        Shutgun = 0,
+        ShotGun = 0,
         StaticBoxCar = 1,
         DynamicBoxCar = 2,
         GlycoFeature = 3     
