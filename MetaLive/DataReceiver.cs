@@ -588,7 +588,7 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, Parameters.MS1IonSelecting.IsolationWindow))
                         {
                             var dataTime = DateTime.Now;
                             DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
@@ -636,7 +636,7 @@ namespace MetaLive
 
                 lock (lockerExclude)
                 {
-                    if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, 1.25))
+                    if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, Parameters.MS1IonSelecting.IsolationWindow))
                     {
                         var dataTime = DateTime.Now;
                         DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
@@ -737,7 +737,7 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.Key, 1.25))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.Key, Parameters.MS1IonSelecting.IsolationWindow))
                         {
                             var dataTime = DateTime.Now;
                             DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.Key, iso.Value, dataTime));
