@@ -56,7 +56,7 @@ namespace MetaLive
         static object lockerExclude = new object();
         static object lockerScan = new object();
         static object lockerGlyco = new object();
-
+      
         internal DataReceiver(Parameters parameters)
         {
             Parameters = parameters;
@@ -588,15 +588,16 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, Parameters.MS1IonSelecting.IsolationWindow))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
                         {
                             var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
                             Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
 
                             var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
-                            theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
+                            //theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
+                            theScan.Mz= iso.peaks.OrderBy(p => p.intensity).Last().mz;
                             lock (lockerScan)
                             {
                                 UserDefinedScans.Enqueue(theScan);
@@ -636,16 +637,16 @@ namespace MetaLive
 
                 lock (lockerExclude)
                 {
-                    if (DynamicExclusionList.isNotInExclusionList(iso.monoisotopicMass, Parameters.MS1IonSelecting.IsolationWindow))
+                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
                     {
                         var dataTime = DateTime.Now;
-                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.monoisotopicMass, iso.charge, dataTime));
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
                         Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
 
                         var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
                         //TO DO: get the best Mz.
-                        theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
+                        theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
                         lock (lockerScan)
                         {
                             UserDefinedScans.Enqueue(theScan);
@@ -686,48 +687,28 @@ namespace MetaLive
         {
             var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderBy(p => p.monoisotopicMass).ToArray();
 
-            HashSet<double> massInThisScan = new HashSet<double>();
-            var masses = IsotopicEnvelopes.Select(p => p.monoisotopicMass).ToArray();
-            for (int i = 0; i < masses.Length; i++)
-            {
-                if (!massInThisScan.Contains(masses[i]))
-                {
-                    massInThisScan.Add(masses[i]);
-                }
-            }
-
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
 
             NeuCodeIsotopicEnvelop[] allIsotops;
 
             lock (lockerGlyco)
             {
-                var dataTime = DateTime.Now;
-                foreach (var isotop in IsotopicEnvelopes)
-                {
-                    IsotopesForGlycoFeature.isotopeList.Enqueue(new Tuple<NeuCodeIsotopicEnvelop, DateTime>(isotop, dataTime));
-                }
+                var dateTime = DateTime.Now;
 
-                allIsotops = IsotopesForGlycoFeature.isotopeList.Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
+                IsotopesForGlycoFeature.AddIsotopeIntoList(IsotopicEnvelopes, dateTime);
+
+                allIsotops = IsotopesForGlycoFeature.isotopeList.Where(p=>!p.Item1.AlreadyExist).Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
             }
 
             var allFeatures = FeatureFinder.ExtractGlycoMS1features(allIsotops);
-            var features = new Dictionary<double, int>();
-            foreach (var f in allFeatures)
-            {
-                if (massInThisScan.Contains(f.Key))
-                {
-                    features.Add(f.Key, f.Value);
-                }
-            }
 
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, features.Count());
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, allFeatures.Count());
 
 
             int placedGlycoFeature = 0;
-            if (features.Count() > 0)
+            if (allFeatures.Count() > 0)
             {
-                foreach (var iso in features)
+                foreach (var iso in allFeatures)
                 {
                     if (placedGlycoFeature >= Parameters.GlycoSetting.TopN)
                     {
@@ -735,15 +716,16 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.Key, Parameters.MS1IonSelecting.IsolationWindow))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
                         {
                             var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.Key, iso.Value, dataTime));
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
                             Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
 
                             var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
 
-                            theScan.Mz = iso.Key.ToMz(iso.Value);
+                            theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
+
                             lock (lockerScan)
                             {
                                 UserDefinedScans.Enqueue(theScan);

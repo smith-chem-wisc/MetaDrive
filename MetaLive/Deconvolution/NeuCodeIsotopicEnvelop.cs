@@ -14,11 +14,16 @@ namespace MassSpectrometry
         {
 
         }
-          
+
         public int ScanNum { get; set; }
         public double RT { get; set; }
         public double ScanTotalIntensity { get; set; }
         public bool IsNeuCode { get; set; }
+
+        //For Glyco family construct
+        public int MatchedFamilyCount { get; set; }
+        public bool FromCurrentScan { get; set; } = true;
+        public bool AlreadyExist{get; set;} = false;
 
         public static string TabSeparatedHeader
         {

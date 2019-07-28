@@ -16,13 +16,15 @@ namespace MetaLive
         static Tolerance tolerance = new PpmTolerance(10);
 
         //To use this function, the input neuCodeIsotopicEnvelops has to be ordered already by monoisotopicMass
-        public static Dictionary<double, int> ExtractGlycoMS1features(NeuCodeIsotopicEnvelop[] neuCodeIsotopicEnvelops)
+        public static List<NeuCodeIsotopicEnvelop> ExtractGlycoMS1features(NeuCodeIsotopicEnvelop[] neuCodeIsotopicEnvelops)
         {
-            Dictionary<double, int> glycanCandidates = new Dictionary<double, int>();
-
+            List<NeuCodeIsotopicEnvelop> isotopicEnvelops = new List<NeuCodeIsotopicEnvelop>();
+            //Dictionary<double, int> glycanCandidates = new Dictionary<double, int>();
+            Dictionary<int, int> keyValuePairs = new Dictionary<int, int>();  //key is ind, value is count of matched
+ 
             if (neuCodeIsotopicEnvelops.Length == 0)
             {
-                return glycanCandidates;
+                return isotopicEnvelops;
             }
 
             var masses = neuCodeIsotopicEnvelops.Select(p => p.monoisotopicMass).ToArray();
@@ -62,15 +64,30 @@ namespace MetaLive
                 {
                     foreach (var m in matchedInd)
                     {
-                        if (!glycanCandidates.ContainsKey(masses[m]))
+                        if (!keyValuePairs.ContainsKey(m))
                         {
-                            glycanCandidates.Add(masses[m], neuCodeIsotopicEnvelops[m].charge);
+                            keyValuePairs.Add(m, 1);
+                        }
+                        else
+                        {
+                            keyValuePairs[m]++;
                         }
                     }
                 }
+
             }
 
-            return glycanCandidates;
+            foreach (var item in keyValuePairs)
+            {
+                //If the isotope is from current scan.
+                if (neuCodeIsotopicEnvelops[item.Key].FromCurrentScan) 
+                {
+                    neuCodeIsotopicEnvelops[item.Key].MatchedFamilyCount = item.Value;
+                    isotopicEnvelops.Add(neuCodeIsotopicEnvelops[item.Key]);
+                }
+            }
+
+            return isotopicEnvelops.OrderByDescending(p=>p.totalIntensity).ToList();
         }
 
     }
