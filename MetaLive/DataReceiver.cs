@@ -495,7 +495,7 @@ namespace MetaLive
                 {
                     string scanNumber;
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
+                    Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
 
                     DeconvoluteAndFindGlycoFeatures(scan);
 
@@ -696,7 +696,7 @@ namespace MetaLive
                 }
             }
 
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
 
             NeuCodeIsotopicEnvelop[] allIsotops;
 
@@ -721,14 +721,12 @@ namespace MetaLive
                 }
             }
 
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, features.Count());
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, features.Count());
 
 
             int placedGlycoFeature = 0;
             if (features.Count() > 0)
             {
-                Console.WriteLine("Find feature: {0}", features.Count());
-
                 foreach (var iso in features)
                 {
                     if (placedGlycoFeature >= Parameters.GlycoSetting.TopN)
@@ -773,7 +771,7 @@ namespace MetaLive
             //Deconvolute whole scan and contrust glycofamily
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum for glycofamily", DateTime.Now);
             var placedGlycoFeature = DeconvolutePeakByGlycoFamily(spectrum);
-
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Placed {1} Glycofamily scans.", DateTime.Now, placedGlycoFeature);
             //features.Count < topN, place random x scans.
             int left = Parameters.MS1IonSelecting.TopN - 2 - placedGlycoFeature;
             if (left > 0)

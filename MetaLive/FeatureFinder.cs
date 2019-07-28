@@ -30,6 +30,10 @@ namespace MetaLive
             //Parallel doesn't help.
             for (int i = 0; i < masses.Length; i++)
             {
+                if (masses[i] < 2000)
+                {
+                    continue;
+                }
                 var families = SugarMass.Select(p => masses[i] + p).ToArray();
 
                 List<int> matchedInd = new List<int>();
