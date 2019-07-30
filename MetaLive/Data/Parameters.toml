@@ -52,3 +52,12 @@ MS2MicroScans = 1
 [GlycoSetting]
 InclusionDuration = 30
 TopN = 15
+
+[DeconvolutionParameter]
+DeconvolutionMinAssumedChargeState = 2
+DeconvolutionMaxAssumedChargeState = 6
+DeconvolutionMassTolerance = 4.0
+DeconvolutionIntensityRatio = 3.0
+NeuCodeMassDefect = 32.0
+MaxmiumNeuCodeNumber = 3
+NeuCodePairRatio = 1.0

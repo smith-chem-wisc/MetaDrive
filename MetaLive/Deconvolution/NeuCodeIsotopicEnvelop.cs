@@ -15,10 +15,15 @@ namespace MassSpectrometry
 
         }
 
+
         public int ScanNum { get; set; }
         public double RT { get; set; }
         public double ScanTotalIntensity { get; set; }
-        public bool IsNeuCode { get; set; }
+        public double SelectedMz { get; set; }
+
+        //For NeuCode Feature
+        public bool IsNeuCode { get; set; } = false;
+        public NeuCodeIsotopicEnvelop Partner { get; set; }
 
         //For Glyco family construct
         public int MatchedFamilyCount { get; set; }

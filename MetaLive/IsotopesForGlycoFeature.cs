@@ -19,7 +19,7 @@ namespace MetaLive
             isotopeList = new Queue<Tuple<NeuCodeIsotopicEnvelop, DateTime>>();
         }
 
-        public void AddIsotopeIntoList(NeuCodeIsotopicEnvelop[] currentIsotopes, DateTime dateTime)
+        public void AddIsotopeIntoList(IEnumerable<NeuCodeIsotopicEnvelop> currentIsotopes, DateTime dateTime)
         {
             for (int i = 0; i < isotopeList.Count; i++)
             {

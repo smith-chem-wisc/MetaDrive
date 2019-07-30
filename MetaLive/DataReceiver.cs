@@ -83,6 +83,10 @@ namespace MetaLive
                     AddScanIntoQueueAction = AddScanIntoQueue_Glyco;
                     Console.WriteLine("AddScanIntoQueueAction = Glyco.");
                     break;
+                case MethodTypes.NeuCode:
+                    AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
+                    Console.WriteLine("AddScanIntoQueueAction = Glyco.");
+                    break;
                 default:
                     break;
             }
@@ -134,18 +138,15 @@ namespace MetaLive
                         Console.WriteLine("Instrument take over Scan by IAPI is dectected.");                      
                         isTakeOver = true;
 
-                        Console.WriteLine("Instrument take over duration time: {0}", Parameters.GeneralSetting.TotalTimeInMinute);
-
-                        FullScan.PlaceFullScan(m_scans, Parameters);
-
-                        Console.WriteLine("Place the first Full scan after Instrument take over.");
+                        Console.WriteLine("Instrument take over duration time: {0} min", Parameters.GeneralSetting.TotalTimeInMinute);
 
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("TakeOver Execption!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -274,9 +275,10 @@ namespace MetaLive
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("DynamicExclusionListDeqeue Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -314,9 +316,10 @@ namespace MetaLive
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("Glyco isotopeList Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -366,9 +369,10 @@ namespace MetaLive
                 }
             }
 
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("PlaceScan Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -389,7 +393,7 @@ namespace MetaLive
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
-                    DeconvoluteMS1ScanAddMS2Scan(scan);
+                    DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
 
                     lock (lockerScan)
                     {
@@ -397,9 +401,10 @@ namespace MetaLive
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -439,9 +444,10 @@ namespace MetaLive
 
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_StaticBoxMS2FromFullScan Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -480,9 +486,10 @@ namespace MetaLive
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_DynamicBoxNoMS2 Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -497,7 +504,7 @@ namespace MetaLive
                     scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
 
-                    DeconvoluteAndFindGlycoFeatures(scan);
+                    DeconvoluteFindGlycoFeatures(scan);
 
                     lock (lockerScan)
                     {
@@ -505,9 +512,36 @@ namespace MetaLive
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
+            }
+        }
+
+        private void AddScanIntoQueue_NeuCode(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
+
+                    DeconvoluteFindNeuCodeFeatures(scan);
+
+                    lock (lockerScan)
+                    {
+                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("AddScanIntoQueue_NeuCode Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
 
@@ -683,9 +717,10 @@ namespace MetaLive
             return dynamicRange;
         }
 
-        private int DeconvolutePeakByGlycoFamily(MzSpectrumBU spectrum)
+        private int DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
         {
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderBy(p => p.monoisotopicMass).ToArray();
+            //TO THINK: improve deconvolution is the key for everything!
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(50);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -740,7 +775,7 @@ namespace MetaLive
             return placedGlycoFeature;
         }
 
-        private void DeconvoluteAndFindGlycoFeatures(IMsScan scan)
+        private void DeconvoluteFindGlycoFeatures(IMsScan scan)
         {
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
 
@@ -752,7 +787,7 @@ namespace MetaLive
 
             //Deconvolute whole scan and contrust glycofamily
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum for glycofamily", DateTime.Now);
-            var placedGlycoFeature = DeconvolutePeakByGlycoFamily(spectrum);
+            var placedGlycoFeature = DeconvolutePeakConstructGlycoFamily(spectrum);
             Console.WriteLine("\n{0:HH:mm:ss,fff} Placed {1} Glycofamily scans.", DateTime.Now, placedGlycoFeature);
             //features.Count < topN, place random x scans.
             int left = Parameters.MS1IonSelecting.TopN - 2 - placedGlycoFeature;
@@ -761,6 +796,73 @@ namespace MetaLive
                 DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, left);
             }
 
+        }
+
+        private int DeconvolutePeakByIntensity_NeuCode(MzSpectrumBU spectrum, IEnumerable<int> indexByY, HashSet<double> seenPeaks, int topN)
+        {
+            int theTopN = 0;
+            foreach (var peakIndex in indexByY)
+            {
+                if (theTopN >= topN)
+                {
+                    break;
+                }
+
+                if (seenPeaks.Contains(spectrum.XArray[peakIndex]))
+                {
+                    continue;
+                }
+                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, DeconvolutionParameter);
+
+                if (iso == null || !iso.IsNeuCode)
+                {
+                    continue;
+                }
+
+                iso.SelectedMz = spectrum.XArray[peakIndex];
+
+                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);                  
+                }
+                foreach (var seenPeak in iso.Partner.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);
+                }
+
+                lock (lockerExclude)
+                {
+                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
+                    {
+                        var dataTime = DateTime.Now;
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
+                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                        var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                        //TO DO: get the best Mz.
+                        theScan.Mz = iso.SelectedMz;
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(theScan);
+                            Console.WriteLine("dataDependentScans increased.");
+                        }
+                        theTopN++;
+                    }
+                }
+            }
+            return theTopN;
+        }
+
+        private void DeconvoluteFindNeuCodeFeatures(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
+
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            HashSet<double> seenPeaks = new HashSet<double>();
+            var indexByY = spectrum.ExtractIndicesByY().Take(100);
+
+            DeconvolutePeakByIntensity_NeuCode(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
 
     }

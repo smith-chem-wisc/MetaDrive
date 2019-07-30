@@ -14,6 +14,7 @@ namespace MassSpectrometry
     public class MzSpectrumBU
     {
         private const int numAveraginesToGenerate = 1500;
+        private SinglePpmAroundZeroSearchMode _neuCodePpmTolerance = new SinglePpmAroundZeroSearchMode(10);
         private static readonly double[][] allMasses = new double[numAveraginesToGenerate][];
         private static readonly double[][] allIntensities = new double[numAveraginesToGenerate][];
         private static readonly double[] mostIntenseMasses = new double[numAveraginesToGenerate];
@@ -144,7 +145,7 @@ namespace MassSpectrometry
                 var closestPeakmz = XArray[closestPeakToTheorMass.Value];
                 //Console.WriteLine("   closestPeakmz: " + closestPeakmz);
                 var closestPeakIntensity = YArray[closestPeakToTheorMass.Value];
-                if (Math.Abs(closestPeakmz.ToMass(chargeState) - theorMassThatTryingToFind) / theorMassThatTryingToFind * 1e6 <= deconvolutionParameter.DeconvolutionMassTolerance.Value
+                if (Math.Abs(closestPeakmz.ToMass(chargeState) - theorMassThatTryingToFind) / theorMassThatTryingToFind * 1e6 <= deconvolutionParameter.DeconvolutionMassTolerance
                     && Peak2satisfiesRatio(allIntensities[massIndex][0], allIntensities[massIndex][indexToLookAt], candidateForMostIntensePeakIntensity, closestPeakIntensity, deconvolutionParameter.DeconvolutionIntensityRatio)
                     && !listOfPeaks.Contains((closestPeakmz, closestPeakIntensity)))
                 {
@@ -230,75 +231,6 @@ namespace MassSpectrometry
             return bestIsotopeEnvelopeForThisPeak;
         }
 
-        // Mass tolerance must account for different isotope spacing!
-        public IEnumerable<NeuCodeIsotopicEnvelop> DeconvoluteBU_NeuCode(MzRange theRange, DeconvolutionParameter deconvolutionParameter)
-        {
-            if (Size == 0)
-            {
-                yield break;
-            }
-
-            var isolatedMassesAndCharges = new List<NeuCodeIsotopicEnvelop>();
-
-            HashSet<double> seenPeaks = new HashSet<double>();
-            int cut = 50;
-
-            ////Deconvolution by Intensity decending order
-            foreach (var candidateForMostIntensePeak in ExtractIndicesByY())
-            ////Deconvolution by MZ increasing order
-            //foreach (var candidateForMostIntensePeak in ExtractIndices(theRange.Minimum, theRange.Maximum))
-            {
-
-                if (seenPeaks.Contains(XArray[candidateForMostIntensePeak]))
-                {
-                    continue;
-                }
-
-                NeuCodeIsotopicEnvelop bestIsotopeEnvelopeForThisPeak = DeconvolutePeak(candidateForMostIntensePeak, deconvolutionParameter);            
-
-                if (bestIsotopeEnvelopeForThisPeak != null && bestIsotopeEnvelopeForThisPeak.peaks.Count >= 2)
-                {                   
-
-                    var pairEnvelop =  GetNeucodeEnvelopForThisEnvelop(bestIsotopeEnvelopeForThisPeak, deconvolutionParameter);
-                    isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
-                    foreach (var peak in bestIsotopeEnvelopeForThisPeak.peaks.Select(p => p.mz))
-                    {
-                        seenPeaks.Add(peak);
-                    }
-
-                    if (pairEnvelop != null)
-                    {
-                        isolatedMassesAndCharges.Add(pairEnvelop);
-
-                        foreach (var peak in pairEnvelop.peaks.Select(p => p.mz))
-                        {
-                            seenPeaks.Add(peak);
-                        }
-                    }                               
-                }
-
-                if (isolatedMassesAndCharges.Count > cut*2)
-                {
-                    break;
-                }
-            }
-
-            HashSet<double> seen = new HashSet<double>();
-
-            foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => ScoreIsotopeEnvelope(b)))
-            {
-                if (seen.Overlaps(ok.peaks.Select(b => b.mz)))
-                {
-                    continue;
-                }
-                foreach (var ah in ok.peaks.Select(b => b.mz))
-                {
-                    seen.Add(ah);
-                }
-                yield return ok;
-            }
-        }
-
         public IEnumerable<NeuCodeIsotopicEnvelop> Deconvolute(MzRange theRange, DeconvolutionParameter deconvolutionParameter)
         {
             if (Size == 0)
@@ -376,6 +308,138 @@ namespace MassSpectrometry
 
             foreach (var ok in neuCodeIsotopicEnvelops)
             {
+                yield return ok;
+            }
+        }
+
+        //DeconvolutePeak_NeuCode
+        public NeuCodeIsotopicEnvelop DeconvolutePeak_NeuCode(int candidateForMostIntensePeak, DeconvolutionParameter deconvolutionParameter)
+        {
+            NeuCodeIsotopicEnvelop bestIsotopeEnvelopeForThisPeak = null;
+
+            var candidateForMostIntensePeakMz = XArray[candidateForMostIntensePeak];
+
+            //Console.WriteLine("candidateForMostIntensePeakMz: " + candidateForMostIntensePeakMz);
+            var candidateForMostIntensePeakIntensity = YArray[candidateForMostIntensePeak];
+
+            //TO DO: Find possible chargeState.
+            List<int> allPossibleChargeState = new List<int>();
+            for (int i = candidateForMostIntensePeak + 1; i < XArray.Length; i++)
+            {
+                if (XArray[i] - candidateForMostIntensePeakMz > 0.01 && XArray[i] - candidateForMostIntensePeakMz < 0.8)
+                {
+                    var chargeDouble = 1 / (XArray[i] - candidateForMostIntensePeakMz);
+                    int charge = Convert.ToInt32(chargeDouble);
+                    if (Math.Abs(chargeDouble - charge) <= 0.1 && charge >= deconvolutionParameter.DeconvolutionMinAssumedChargeState && charge <= deconvolutionParameter.DeconvolutionMaxAssumedChargeState)
+                    {
+                        allPossibleChargeState.Add(charge);
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            foreach (var chargeState in allPossibleChargeState)
+            {
+                //Console.WriteLine(" chargeState: " + chargeState);
+                var testMostIntenseMass = candidateForMostIntensePeakMz.ToMass(chargeState);
+
+                var massIndex = Array.BinarySearch(mostIntenseMasses, testMostIntenseMass);
+                if (massIndex < 0)
+                    massIndex = ~massIndex;
+                if (massIndex == mostIntenseMasses.Length)
+                {
+                    //Console.WriteLine("Breaking  because mass is too high: " + testMostIntenseMass);
+                    break;
+                }
+                //Console.WriteLine("  massIndex: " + massIndex);
+
+                var test = GetEnvelopForPeakAtChargeState(candidateForMostIntensePeakMz, candidateForMostIntensePeakIntensity, massIndex, chargeState, deconvolutionParameter);
+
+                if (test.peaks.Count >= 2 && test.stDev < 0.00001 && ScoreIsotopeEnvelope(test) > ScoreIsotopeEnvelope(bestIsotopeEnvelopeForThisPeak))
+                {
+                    //Console.WriteLine("Better charge state is " + test.charge);
+                    //Console.WriteLine("peaks: " + string.Join(",", listOfPeaks.Select(b => b.Item1)));
+                    bestIsotopeEnvelopeForThisPeak = test;
+                }
+            }
+
+            if (bestIsotopeEnvelopeForThisPeak!=null)
+            {
+                var pairEnvelop = GetNeucodeEnvelopForThisEnvelop(bestIsotopeEnvelopeForThisPeak, deconvolutionParameter);
+                bestIsotopeEnvelopeForThisPeak.Partner = pairEnvelop;
+            }
+
+            return bestIsotopeEnvelopeForThisPeak;
+        }
+
+        // Mass tolerance must account for different isotope spacing!
+        public IEnumerable<NeuCodeIsotopicEnvelop> DeconvoluteBU_NeuCode(MzRange theRange, DeconvolutionParameter deconvolutionParameter)
+        {
+            if (Size == 0)
+            {
+                yield break;
+            }
+
+            var isolatedMassesAndCharges = new List<NeuCodeIsotopicEnvelop>();
+
+            HashSet<double> seenPeaks = new HashSet<double>();
+            int cut = 50;
+
+            ////Deconvolution by Intensity decending order
+            foreach (var candidateForMostIntensePeak in ExtractIndicesByY())
+            ////Deconvolution by MZ increasing order
+            //foreach (var candidateForMostIntensePeak in ExtractIndices(theRange.Minimum, theRange.Maximum))
+            {
+
+                if (seenPeaks.Contains(XArray[candidateForMostIntensePeak]))
+                {
+                    continue;
+                }
+
+                NeuCodeIsotopicEnvelop bestIsotopeEnvelopeForThisPeak = DeconvolutePeak(candidateForMostIntensePeak, deconvolutionParameter);
+
+                if (bestIsotopeEnvelopeForThisPeak != null && bestIsotopeEnvelopeForThisPeak.peaks.Count >= 2)
+                {
+
+                    var pairEnvelop = GetNeucodeEnvelopForThisEnvelop(bestIsotopeEnvelopeForThisPeak, deconvolutionParameter);
+                    isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
+                    foreach (var peak in bestIsotopeEnvelopeForThisPeak.peaks.Select(p => p.mz))
+                    {
+                        seenPeaks.Add(peak);
+                    }
+
+                    if (pairEnvelop != null)
+                    {
+                        isolatedMassesAndCharges.Add(pairEnvelop);
+
+                        foreach (var peak in pairEnvelop.peaks.Select(p => p.mz))
+                        {
+                            seenPeaks.Add(peak);
+                        }
+                    }
+                }
+
+                if (isolatedMassesAndCharges.Count > cut * 2)
+                {
+                    break;
+                }
+            }
+
+            HashSet<double> seen = new HashSet<double>();
+
+            foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => ScoreIsotopeEnvelope(b)))
+            {
+                if (seen.Overlaps(ok.peaks.Select(b => b.mz)))
+                {
+                    continue;
+                }
+                foreach (var ah in ok.peaks.Select(b => b.mz))
+                {
+                    seen.Add(ah);
+                }
                 yield return ok;
             }
         }
@@ -489,6 +553,51 @@ namespace MassSpectrometry
             return true;
         }
 
+        //NeuCode
+        private NeuCodeIsotopicEnvelop GetNeucodeEnvelopForThisEnvelop(NeuCodeIsotopicEnvelop BestIsotopicEnvelop, DeconvolutionParameter deconvolutionParameter)
+        {
+            NeuCodeIsotopicEnvelop neuCodeIsotopicEnvelop = null;
+
+            var MostIntensePeakMz = BestIsotopicEnvelop.peaks.First().mz;
+
+            List<int> range = new List<int>();
+
+
+            for (int i = 1; i <= deconvolutionParameter.MaxmiumNeuCodeNumber; i++)
+            {
+                range.Add(i);
+            }
+
+            foreach (var i in range)
+            {
+                var NeuCodeMostIntesePeakMz = MostIntensePeakMz + deconvolutionParameter.NeuCodeMassDefect * i / BestIsotopicEnvelop.charge/1000;
+
+                var closestPeakIndex = GetClosestPeakIndex(NeuCodeMostIntesePeakMz);
+                var closestPeakmz = XArray[closestPeakIndex.Value];
+                var closestPeakIntensity = YArray[closestPeakIndex.Value];
+                if (closestPeakmz != MostIntensePeakMz && _neuCodePpmTolerance.Accepts(closestPeakmz.ToMass(BestIsotopicEnvelop.charge), NeuCodeMostIntesePeakMz.ToMass(BestIsotopicEnvelop.charge)) >= 0)
+                {
+                    var test = GetEnvelopForPeakAtChargeState(closestPeakmz, closestPeakIntensity, BestIsotopicEnvelop.massIndex, BestIsotopicEnvelop.charge, deconvolutionParameter);
+                    if (ScoreIsotopeEnvelope(test) > ScoreIsotopeEnvelope(neuCodeIsotopicEnvelop))
+                    {                     
+                        neuCodeIsotopicEnvelop = test;
+
+                    }
+                }
+            }
+
+            if (neuCodeIsotopicEnvelop != null)
+            {
+                if (0.75 <= Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) || Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) <= 1.25)
+                {
+                    BestIsotopicEnvelop.IsNeuCode = true;
+                }             
+            }
+
+            return neuCodeIsotopicEnvelop;
+        }
+
+        //ChargeState
         public List<ChargeDeconEnvelope> ChargeDeconvolution(int OneBasedScanNumber, double rt, List<NeuCodeIsotopicEnvelop> isotopicEnvelopes, List<double?> selectedMs2)
         {
             List<ChargeDeconEnvelope> chargeDeconEnvelopes = new List<ChargeDeconEnvelope>();
@@ -564,46 +673,6 @@ namespace MassSpectrometry
                 }
             }
 
-        }
-
-        private NeuCodeIsotopicEnvelop GetNeucodeEnvelopForThisEnvelop(NeuCodeIsotopicEnvelop BestIsotopicEnvelop, DeconvolutionParameter deconvolutionParameter)
-        {
-            NeuCodeIsotopicEnvelop neuCodeIsotopicEnvelop = null;
-
-            var MostIntensePeakMz = BestIsotopicEnvelop.peaks.First().mz;
-
-            List<int> range = new List<int>();
-            var j = 0-deconvolutionParameter.MaxmiumNeuCodeNumber;
-            while (j <= deconvolutionParameter.MaxmiumNeuCodeNumber)
-            {
-                if (j != 0)
-                {
-                    range.Add(j);
-                }
-                j++;
-            }
-
-            foreach (var i in range)
-            {
-                var NeuCodeMostIntesePeakMz = MostIntensePeakMz + deconvolutionParameter.NeuCodeMassDefect * i / BestIsotopicEnvelop.charge/1000;
-
-                var closestPeakIndex = GetClosestPeakIndex(NeuCodeMostIntesePeakMz);
-                var closestPeakmz = XArray[closestPeakIndex.Value];
-                var closestPeakIntensity = YArray[closestPeakIndex.Value];
-                if (closestPeakmz != MostIntensePeakMz && Math.Abs(closestPeakmz.ToMass(BestIsotopicEnvelop.charge) - NeuCodeMostIntesePeakMz.ToMass(BestIsotopicEnvelop.charge)) / NeuCodeMostIntesePeakMz.ToMass(BestIsotopicEnvelop.charge) * 1e6 <= deconvolutionParameter.DeconvolutionMassTolerance.Value)
-                {
-                    var test = GetEnvelopForPeakAtChargeState(closestPeakmz, closestPeakIntensity, BestIsotopicEnvelop.massIndex, BestIsotopicEnvelop.charge, deconvolutionParameter);
-                    if (ScoreIsotopeEnvelope(test) > ScoreIsotopeEnvelope(neuCodeIsotopicEnvelop))
-                    {                     
-                        neuCodeIsotopicEnvelop = test;
-                        BestIsotopicEnvelop.IsNeuCode = true;
-                        neuCodeIsotopicEnvelop.IsNeuCode = true;
-                    }
-                }
-
-            }
-
-            return neuCodeIsotopicEnvelop;
         }
 
     }

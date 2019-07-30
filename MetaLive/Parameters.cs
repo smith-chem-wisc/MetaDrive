@@ -11,7 +11,8 @@ namespace MetaLive
         ShotGun = 0,
         StaticBoxCar = 1,
         DynamicBoxCar = 2,
-        GlycoFeature = 3     
+        GlycoFeature = 3,
+        NeuCode = 4
     }
 
     public class Parameters
@@ -22,6 +23,7 @@ namespace MetaLive
         public MS1IonSelecting MS1IonSelecting { get; set; }
         public MS2ScanSetting MS2ScanSetting { get; set; }
         public GlycoSetting GlycoSetting { get; set; }
+        public DeconvolutionParameter DeconvolutionParameter { get; set; }
     }
 
     public class GeneralSetting
