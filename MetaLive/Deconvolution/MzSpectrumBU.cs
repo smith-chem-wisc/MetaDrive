@@ -405,7 +405,7 @@ namespace MassSpectrometry
                 {
 
                     var pairEnvelop = GetNeucodeEnvelopForThisEnvelop(bestIsotopeEnvelopeForThisPeak, deconvolutionParameter);
-                    isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
+
                     foreach (var peak in bestIsotopeEnvelopeForThisPeak.peaks.Select(p => p.mz))
                     {
                         seenPeaks.Add(peak);
@@ -413,13 +413,14 @@ namespace MassSpectrometry
 
                     if (pairEnvelop != null)
                     {
-                        isolatedMassesAndCharges.Add(pairEnvelop);
+                        bestIsotopeEnvelopeForThisPeak.Partner = pairEnvelop;
 
                         foreach (var peak in pairEnvelop.peaks.Select(p => p.mz))
                         {
                             seenPeaks.Add(peak);
                         }
                     }
+                    isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
                 }
 
                 if (isolatedMassesAndCharges.Count > cut * 2)
@@ -563,9 +564,12 @@ namespace MassSpectrometry
             List<int> range = new List<int>();
 
 
-            for (int i = 1; i <= deconvolutionParameter.MaxmiumNeuCodeNumber; i++)
+            for (int i = -deconvolutionParameter.MaxmiumNeuCodeNumber; i <= deconvolutionParameter.MaxmiumNeuCodeNumber; i++)
             {
-                range.Add(i);
+                if (i != 0)
+                {
+                    range.Add(i);
+                }
             }
 
             foreach (var i in range)
@@ -588,7 +592,7 @@ namespace MassSpectrometry
 
             if (neuCodeIsotopicEnvelop != null)
             {
-                if (0.75 <= Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) || Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) <= 1.25)
+                if (0.55 <= Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) || Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) <= 1.45)
                 {
                     BestIsotopicEnvelop.IsNeuCode = true;
                 }             
