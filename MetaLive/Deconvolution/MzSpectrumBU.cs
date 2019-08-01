@@ -592,7 +592,19 @@ namespace MassSpectrometry
 
             if (neuCodeIsotopicEnvelop != null)
             {
-                if (0.55 <= Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) || Math.Abs(BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity) <= 1.45)
+                var pairRatio = BestIsotopicEnvelop.totalIntensity / neuCodeIsotopicEnvelop.totalIntensity;
+
+                var rangeRatio = NeuCodeIsotopicEnvelop.EnvolopeToRangeRatio(XArray, YArray, BestIsotopicEnvelop.massIndex, BestIsotopicEnvelop.SelectedMz, BestIsotopicEnvelop.totalIntensity + neuCodeIsotopicEnvelop.totalIntensity);
+
+                if (0.75 <= pairRatio && pairRatio <= 1.25 && rangeRatio > 0.5)
+                {
+                    BestIsotopicEnvelop.IsNeuCode = true;
+                }
+                else if (BestIsotopicEnvelop.peaks.Count >= 3 && neuCodeIsotopicEnvelop.peaks.Count >= 3 && rangeRatio > 0.5 && (pairRatio > 0.2 && pairRatio < 5))
+                {
+                    BestIsotopicEnvelop.IsNeuCode = true;
+                }
+                else if (BestIsotopicEnvelop.peaks.Count >= 4 && neuCodeIsotopicEnvelop.peaks.Count >= 4 && BestIsotopicEnvelop.peaks.Count == neuCodeIsotopicEnvelop.peaks.Count)
                 {
                     BestIsotopicEnvelop.IsNeuCode = true;
                 }             

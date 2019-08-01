@@ -30,6 +30,30 @@ namespace MassSpectrometry
         public bool FromCurrentScan { get; set; } = true;
         public bool AlreadyExist{get; set;} = false;
 
+        private static double SelectedRangeRatio(double[] x, double[] y, int massIndex, double SelectedMz)
+        {
+            double rangeIntensities = 0;
+            int ind_down = massIndex;
+            while (x[ind_down] < SelectedMz + 0.5 && x[ind_down] > SelectedMz + 1)
+            {
+                rangeIntensities += y[ind_down];
+                ind_down--;
+            }
+            int ind_up = massIndex + 1;
+            while (x[ind_up] < SelectedMz + 0.5 && x[ind_up] > SelectedMz + 1)
+            {
+                rangeIntensities += y[ind_up];
+                ind_up++;
+            }
+            return rangeIntensities;
+        }
+
+        public static double EnvolopeToRangeRatio(double[] x, double[] y, int massIndex, double SelectedMz, double totalIntensity)
+        {
+            var rangeIntensity = SelectedRangeRatio(x, y, massIndex, SelectedMz);
+            return totalIntensity / rangeIntensity;
+        }
+
         public static string TabSeparatedHeader
         {
             get

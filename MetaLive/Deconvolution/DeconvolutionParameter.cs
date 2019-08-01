@@ -8,7 +8,7 @@ namespace MetaLive
         {
             DeconvolutionMinAssumedChargeState = 2;
             DeconvolutionMaxAssumedChargeState = 6;
-            DeconvolutionMassTolerance = 5;
+            DeconvolutionMassTolerance = 4;
             DeconvolutionIntensityRatio = 3;
 
             NeuCodeMassDefect = 32.7;

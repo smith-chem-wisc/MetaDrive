@@ -856,14 +856,13 @@ namespace MetaLive
 
         private void DeconvoluteFindNeuCodeFeatures(IMsScan scan)
         {
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute NeuCode Start", DateTime.Now);
 
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             HashSet<double> seenPeaks = new HashSet<double>();
-            var indexByY = spectrum.ExtractIndicesByY().Take(100);
+            var indexByY = spectrum.ExtractIndicesByY();
 
             DeconvolutePeakByIntensity_NeuCode(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
-
     }
 }
