@@ -369,7 +369,10 @@ namespace MassSpectrometry
             if (bestIsotopeEnvelopeForThisPeak!=null)
             {
                 var pairEnvelop = GetNeucodeEnvelopForThisEnvelop(bestIsotopeEnvelopeForThisPeak, deconvolutionParameter);
-                bestIsotopeEnvelopeForThisPeak.Partner = pairEnvelop;
+                if (bestIsotopeEnvelopeForThisPeak.IsNeuCode)
+                {
+                    bestIsotopeEnvelopeForThisPeak.Partner = pairEnvelop;
+                }
             }
 
             return bestIsotopeEnvelopeForThisPeak;

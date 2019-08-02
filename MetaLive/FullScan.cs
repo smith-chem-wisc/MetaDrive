@@ -12,8 +12,6 @@ namespace MetaLive
     {
         public static void PlaceFullScan(IScans m_scans, Parameters parameters)
         {
-            Console.WriteLine("{0:HH:mm:ss,fff} Start place Full MS1 scan", DateTime.Now);
-
             if (m_scans.PossibleParameters.Length == 0)
             {
                 return;

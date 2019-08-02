@@ -35,6 +35,7 @@ using MassSpectrometry;
 using MzLibUtil;
 using Chemistry;
 
+
 namespace MetaLive
 {
     /// <summary>
@@ -85,7 +86,7 @@ namespace MetaLive
                     break;
                 case MethodTypes.NeuCode:
                     AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
-                    Console.WriteLine("AddScanIntoQueueAction = Glyco.");
+                    Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
                     break;
                 default:
                     break;
@@ -124,23 +125,13 @@ namespace MetaLive
 
         private void TakeOverInstrumentMessage(IMsScan scan)
         {
-            object massRanges;
-            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
             try
             {
-                if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+                if (IsTakeOverScan(scan))
                 {
-                    x = (ThermoFisher.Foundation.IO.Range[])massRanges;
-                    Console.WriteLine("{0}, {1}", x.First().Low, x.First().High);
-
-                    if (x.First().Low == 374.0 && x.First().High == 1751.0)
-                    {
-                        Console.WriteLine("Instrument take over Scan by IAPI is dectected.");                      
-                        isTakeOver = true;
-
-                        Console.WriteLine("Instrument take over duration time: {0} min", Parameters.GeneralSetting.TotalTimeInMinute);
-
-                    }
+                    Console.WriteLine("Instrument take over Scan by IAPI is dectected.");
+                    isTakeOver = true;
+                    Console.WriteLine("Instrument take over duration time: {0} min", Parameters.GeneralSetting.TotalTimeInMinute);
                 }
             }
             catch (Exception e)
@@ -182,12 +173,13 @@ namespace MetaLive
                 using (m_scans = instrument.Control.GetScans(false))
                 {                    
                     IMsScanContainer orbitrap = instrument.GetMsScanContainer(0);
-                    Console.WriteLine("Waiting for scans on detector " + orbitrap.DetectorClass + "...");
+                    Console.WriteLine("Waiting for scans on detector " + orbitrap.DetectorClass + "...");                   
 
                     orbitrap.AcquisitionStreamOpening += Orbitrap_AcquisitionStreamOpening;
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
+                    FullScan.PlaceFullScan(m_scans, Parameters);
                     Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute * 60000);
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
@@ -209,19 +201,22 @@ namespace MetaLive
 
                 //TO THINK: If the coming scan is MS2 scan, start the timing of the scan precursor into exclusion list. Currently, start when add the scan precursor.
 
-                if (!IsMS1Scan(scan))
+                if (!IsTakeOverScan(scan))
                 {
-                    Console.WriteLine("MS2 Scan arrived.");
-                }
-                else
-                {
-                    Console.WriteLine("MS1 Scan arrived.");
-                    if (!TimeIsOver)
+                    if (!IsMS1Scan(scan))
                     {
-                        AddScanIntoQueueAction(scan);
+
+                        Console.WriteLine("MS2 Scan arrived.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("MS1 Scan arrived.");
+                        if (!TimeIsOver)
+                        {
+                            AddScanIntoQueueAction(scan);
+                        }
                     }
                 }
-
             }
         }
 
@@ -526,9 +521,7 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
+                    Console.WriteLine("MS1 Scan arrived NeuCode.");
 
                     DeconvoluteFindNeuCodeFeatures(scan);
 
@@ -543,6 +536,24 @@ namespace MetaLive
                 Console.WriteLine("AddScanIntoQueue_NeuCode Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
+        }
+
+        private bool IsTakeOverScan(IMsScan scan)
+        {
+            object massRanges;
+            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
+
+            if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+            {
+                x = (ThermoFisher.Foundation.IO.Range[])massRanges;
+                Console.WriteLine("Take Over scan: {0}, {1}", x.First().Low, x.First().High);
+
+                if (x.First().Low == 374.0 && x.First().High == 1751.0)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private bool IsMS1Scan(IMsScan scan)
@@ -622,7 +633,7 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
                         {
                             var dataTime = DateTime.Now;
                             DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
@@ -671,7 +682,7 @@ namespace MetaLive
 
                 lock (lockerExclude)
                 {
-                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
+                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
                     {
                         var dataTime = DateTime.Now;
                         DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
@@ -751,7 +762,7 @@ namespace MetaLive
                     }
                     lock (lockerExclude)
                     {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
+                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
                         {
                             var dataTime = DateTime.Now;
                             DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
@@ -819,6 +830,8 @@ namespace MetaLive
                     continue;
                 }
 
+                Console.WriteLine("NeuCode pair come.");
+
                 iso.SelectedMz = spectrum.XArray[peakIndex];
 
                 foreach (var seenPeak in iso.peaks.Select(b => b.mz))
@@ -832,7 +845,7 @@ namespace MetaLive
 
                 lock (lockerExclude)
                 {
-                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.IsolationWindow))
+                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
                     {
                         var dataTime = DateTime.Now;
                         DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));

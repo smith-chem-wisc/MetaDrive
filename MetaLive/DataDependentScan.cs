@@ -64,7 +64,7 @@ namespace MetaLive
             ////    Console.WriteLine(item.Name + "----" + item.DefaultValue + "----" + item.Help + "----" + item.Selection);
             ////}
 
-            Console.WriteLine("{0:HH:mm:ss,fff} placing data dependent ms2 scan {1}", DateTime.Now, xl);
+            Console.WriteLine("{0:HH:mm:ss,fff} placing data dependent ms2 scan {1}", DateTime.Now, mz);
             m_scans.SetCustomScan(scan);
         }
     }

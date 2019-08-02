@@ -31,11 +31,12 @@ Microscans = 1
 [MS1IonSelecting]
 TopN = 5
 DynamicExclusion = true
-ExclusionDuration = 30
+ExclusionDuration = 15
+ExclusionTolerance = 0.3
 IsolationWindow = 0.7
 NormCharge = 2
 MinCharge = 2
-MaxCharge = 5
+MaxCharge = 6
 IntensityThreshold = 0
 
 [MS2ScanSetting]

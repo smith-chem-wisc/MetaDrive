@@ -294,6 +294,7 @@ namespace MetaLive
         public int TopN { get; set; }
         public bool DynamicExclusion { get; set; }
         public int ExclusionDuration { get; set; }
+        public double ExclusionTolerance { get; set; }
         public double IsolationWindow { get; set; }
         public int NormCharge { get; set; }
         public int MinCharge { get; set; }
