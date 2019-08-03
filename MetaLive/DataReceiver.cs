@@ -48,6 +48,8 @@ namespace MetaLive
         public IMsScanContainer ScanContainer { get; set; }
 
         bool isTakeOver = false;
+        bool firstFullScanPlaced = false;
+
         bool dynamicExclude = true;
         bool glycoInclude = true;
         bool placeUserDefinedScan = true;
@@ -167,7 +169,6 @@ namespace MetaLive
                 Console.WriteLine("Start Thread for glyco Inclusion list!");
             }
 
-
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
                 using (m_scans = instrument.Control.GetScans(false))
@@ -179,7 +180,6 @@ namespace MetaLive
                     orbitrap.AcquisitionStreamClosing += Orbitrap_AcquisitionStreamClosing;
                     orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 
-                    FullScan.PlaceFullScan(m_scans, Parameters);
                     Thread.CurrentThread.Join(Parameters.GeneralSetting.TotalTimeInMinute * 60000);
 
                     orbitrap.MsScanArrived -= Orbitrap_MsScanArrived;
@@ -203,12 +203,7 @@ namespace MetaLive
 
                 if (!IsTakeOverScan(scan))
                 {
-                    if (!IsMS1Scan(scan))
-                    {
-
-                        Console.WriteLine("MS2 Scan arrived.");
-                    }
-                    else
+                    if (IsMS1Scan(scan))
                     {
                         Console.WriteLine("MS1 Scan arrived.");
                         if (!TimeIsOver)
@@ -216,6 +211,17 @@ namespace MetaLive
                             AddScanIntoQueueAction(scan);
                         }
                     }
+                    else
+                    {
+
+                        Console.WriteLine("MS2 Scan arrived.");
+                    }
+                }
+                else if (!firstFullScanPlaced)
+                {
+                    FullScan.PlaceFullScan(m_scans, Parameters);
+                    Console.WriteLine("Place First User defined Full Scan.");
+                    firstFullScanPlaced = true;
                 }
             }
         }
@@ -825,7 +831,17 @@ namespace MetaLive
                 }
                 var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, DeconvolutionParameter);
 
-                if (iso == null || !iso.IsNeuCode)
+                if (iso == null)
+                {
+                    continue;
+                }
+
+                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);
+                }
+
+                if (!iso.IsNeuCode)
                 {
                     continue;
                 }
@@ -833,11 +849,7 @@ namespace MetaLive
                 Console.WriteLine("NeuCode pair come.");
 
                 iso.SelectedMz = spectrum.XArray[peakIndex];
-
-                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
-                {
-                    seenPeaks.Add(seenPeak);                  
-                }
+                
                 foreach (var seenPeak in iso.Partner.peaks.Select(b => b.mz))
                 {
                     seenPeaks.Add(seenPeak);
@@ -873,7 +885,7 @@ namespace MetaLive
 
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             HashSet<double> seenPeaks = new HashSet<double>();
-            var indexByY = spectrum.ExtractIndicesByY();
+            var indexByY = spectrum.ExtractIndicesByY().Take(300);
 
             DeconvolutePeakByIntensity_NeuCode(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
