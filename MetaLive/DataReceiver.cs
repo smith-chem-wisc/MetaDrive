@@ -506,11 +506,6 @@ namespace MetaLive
                     Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
 
                     DeconvoluteFindGlycoFeatures(scan);
-
-                    lock (lockerScan)
-                    {
-                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                    }
                 }
             }
             catch (Exception e)
@@ -531,10 +526,6 @@ namespace MetaLive
 
                     DeconvoluteFindNeuCodeFeatures(scan);
 
-                    lock (lockerScan)
-                    {
-                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                    }
                 }
             }
             catch (Exception e)
@@ -612,6 +603,30 @@ namespace MetaLive
             //return false;
         }
 
+        private void AddIsotopicEnvelope2UserDefinedScans(NeuCodeIsotopicEnvelop iso, ref int theTopN)
+        {
+            lock (lockerExclude)
+            {
+                if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                {
+                    var dataTime = DateTime.Now;
+                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
+                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+
+                    var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                    //TO DO: get the best Mz.
+                    theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
+                    lock (lockerScan)
+                    {
+                        UserDefinedScans.Enqueue(theScan);
+                        Console.WriteLine("dataDependentScans increased.");
+                    }
+                    theTopN++;
+                }
+            }
+        }
+
         private void DeconvoluteMS1ScanAddMS2Scan(IMsScan scan)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
@@ -637,26 +652,7 @@ namespace MetaLive
                     {
                         break;
                     }
-                    lock (lockerExclude)
-                    {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-
-                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                            //theScan.Mz = iso.monoisotopicMass.ToMz(iso.charge);
-                            theScan.Mz= iso.peaks.OrderBy(p => p.intensity).Last().mz;
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(theScan);
-                                Console.WriteLine("dataDependentScans increased.");
-                            }
-                            topN++;
-                        }
-                    }
+                    AddIsotopicEnvelope2UserDefinedScans(iso, ref topN);
                 }
             }
 
@@ -686,26 +682,7 @@ namespace MetaLive
                     seenPeaks.Add(seenPeak);
                 }
 
-                lock (lockerExclude)
-                {
-                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                    {
-                        var dataTime = DateTime.Now;
-                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
-                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-
-                        var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                        //TO DO: get the best Mz.
-                        theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
-                        lock (lockerScan)
-                        {
-                            UserDefinedScans.Enqueue(theScan);
-                            Console.WriteLine("dataDependentScans increased.");
-                        }
-                        theTopN++;
-                    }
-                }
+                AddIsotopicEnvelope2UserDefinedScans(iso, ref theTopN);
             }
             return theTopN;
         }
@@ -734,7 +711,7 @@ namespace MetaLive
             return dynamicRange;
         }
 
-        private int DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
+        private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
         {
             //TO THINK: improve deconvolution is the key for everything!
             var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(50);
@@ -756,6 +733,7 @@ namespace MetaLive
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, allFeatures.Count());
 
+            List<NeuCodeIsotopicEnvelop> glycoIsotope = new List<NeuCodeIsotopicEnvelop>();
 
             int placedGlycoFeature = 0;
             if (allFeatures.Count() > 0)
@@ -766,6 +744,7 @@ namespace MetaLive
                     {
                         break;
                     }
+                    
                     lock (lockerExclude)
                     {
                         if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
@@ -773,46 +752,80 @@ namespace MetaLive
                             var dataTime = DateTime.Now;
                             DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
                             Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-
-                            var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                            theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
-
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(theScan);
-                                Console.WriteLine("dataDependentScans increased.");
-                            }
+                            iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
+                            glycoIsotope.Add(iso);
                             placedGlycoFeature++;
                         }
                     }
                 }
             }
 
-            return placedGlycoFeature;
+            if (placedGlycoFeature < 5)
+            {
+                foreach (var iso in IsotopicEnvelopes)
+                {
+                    if (placedGlycoFeature - 5 >= 0)
+                    {
+                        break;
+                    }
+                    lock (lockerExclude)
+                    {
+                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                        {
+                            var dataTime = DateTime.Now;
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
+                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                            iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
+                            glycoIsotope.Add(iso);
+                            placedGlycoFeature++;
+                        }
+                    }
+                }
+            }
+
+            return glycoIsotope;
         }
 
         private void DeconvoluteFindGlycoFeatures(IMsScan scan)
         {
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
 
-            //Place 2 random scan first.
-            HashSet<double> seenPeaks = new HashSet<double>();
-            var indexByY = spectrum.ExtractIndicesByY();
-            int scanPlaced = 0;
-            scanPlaced = DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, 2);
-
             //Deconvolute whole scan and contrust glycofamily
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum for glycofamily", DateTime.Now);
-            var placedGlycoFeature = DeconvolutePeakConstructGlycoFamily(spectrum);
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Placed {1} Glycofamily scans.", DateTime.Now, placedGlycoFeature);
-            //features.Count < topN, place random x scans.
-            int left = Parameters.MS1IonSelecting.TopN - 2 - placedGlycoFeature;
-            if (left > 0)
-            {               
-                DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, left);
-            }
+            var candidates = DeconvolutePeakConstructGlycoFamily(spectrum);
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Placed {1} Glycofamily scans.", DateTime.Now, candidates);
 
+            int j = 0;
+            while (j <= candidates.Count() - 6)
+            {
+                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                //TO DO: get the best Mz.
+                theScan.Mz = candidates[j].SelectedMz;
+                lock (lockerScan)
+                {
+                    UserDefinedScans.Enqueue(theScan);
+                    Console.WriteLine("dataDependentScans increased.");
+                }
+                j++;
+            }
+            lock (lockerScan)
+            {
+                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+            }
+            while (j <= candidates.Count() - 1)
+            {
+                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                //TO DO: get the best Mz.
+                theScan.Mz = candidates[j].SelectedMz;
+                lock (lockerScan)
+                {
+                    UserDefinedScans.Enqueue(theScan);
+                    Console.WriteLine("dataDependentScans increased.");
+                }
+                j++;
+            }
         }
 
         private int DeconvolutePeakByIntensity_NeuCode(MzSpectrumBU spectrum, IEnumerable<int> indexByY, HashSet<double> seenPeaks, int topN)
@@ -879,15 +892,130 @@ namespace MetaLive
             return theTopN;
         }
 
+        private List<NeuCodeIsotopicEnvelop> DeconvolutePeakByIntensity_NeuCode_NoPlacing(MzSpectrumBU spectrum, IEnumerable<int> indexByY, HashSet<double> seenPeaks, int topN, ref List<NeuCodeIsotopicEnvelop> normalIsotopicEnvelops)
+        {
+            List<NeuCodeIsotopicEnvelop> neuCodeIsotopicEnvelops = new List<NeuCodeIsotopicEnvelop>();
+            int theTopN = 0;
+            foreach (var peakIndex in indexByY)
+            {
+                if (theTopN >= topN)
+                {
+                    break;
+                }
+
+                if (seenPeaks.Contains(spectrum.XArray[peakIndex]))
+                {
+                    continue;
+                }
+                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, DeconvolutionParameter);
+
+                if (iso == null)
+                {
+                    continue;
+                }
+
+                iso.SelectedMz = spectrum.XArray[peakIndex];
+
+                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);
+                }
+
+                if (!iso.IsNeuCode)
+                {
+                    normalIsotopicEnvelops.Add(iso);
+                    continue;
+                }
+
+                Console.WriteLine("NeuCode pair come.");            
+
+                foreach (var seenPeak in iso.Partner.peaks.Select(b => b.mz))
+                {
+                    seenPeaks.Add(seenPeak);
+                }
+
+                lock (lockerExclude)
+                {
+                    if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                    {
+                        var dataTime = DateTime.Now;
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
+                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                        neuCodeIsotopicEnvelops.Add(iso);
+
+                        theTopN++;
+                    }
+                }
+            }
+            return neuCodeIsotopicEnvelops;
+        }
+
         private void DeconvoluteFindNeuCodeFeatures(IMsScan scan)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute NeuCode Start", DateTime.Now);
 
             var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             HashSet<double> seenPeaks = new HashSet<double>();
-            var indexByY = spectrum.ExtractIndicesByY().Take(300);
+            var indexByY = spectrum.ExtractIndicesByY();
 
-            DeconvolutePeakByIntensity_NeuCode(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
-        }
+            List<NeuCodeIsotopicEnvelop> normalIsotopicEnvelops = new List<NeuCodeIsotopicEnvelop>();
+            var candidates = DeconvolutePeakByIntensity_NeuCode_NoPlacing(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN, ref normalIsotopicEnvelops).OrderBy(p=>p.totalIntensity).ToList();
+
+            if (Parameters.MS1IonSelecting.TopN - candidates.Count() >0 )
+            {
+                int normalAdd = Parameters.MS1IonSelecting.TopN - candidates.Count();
+
+                foreach (var niso in normalIsotopicEnvelops)
+                {
+                    if (normalAdd > 0)
+                    {
+                        lock (lockerExclude)
+                        {
+                            if (DynamicExclusionList.isNotInExclusionList(niso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                            {
+                                var dataTime = DateTime.Now;
+                                DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(niso.peaks.OrderBy(p => p.intensity).Last().mz, niso.charge, dataTime));
+                                Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                                
+                                candidates.Add(niso);
+                                normalAdd--;
+                            }
+                        }
+                    }
+                }
+            }
+
+            int j = 0;
+            while (j <= candidates.Count() - 6)
+            {
+                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                //TO DO: get the best Mz.
+                theScan.Mz = candidates[j].SelectedMz;
+                lock (lockerScan)
+                {
+                    UserDefinedScans.Enqueue(theScan);
+                    Console.WriteLine("dataDependentScans increased.");
+                }
+                j++;
+            }
+            lock (lockerScan)
+            {
+                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+            }
+            while (j <= candidates.Count() - 1)
+            {
+                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+
+                //TO DO: get the best Mz.
+                theScan.Mz = candidates[j].SelectedMz;
+                lock (lockerScan)
+                {
+                    UserDefinedScans.Enqueue(theScan);
+                    Console.WriteLine("dataDependentScans increased.");
+                }
+                j++;
+            }
+        }      
     }
 }

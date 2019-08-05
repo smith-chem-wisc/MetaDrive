@@ -4,11 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using EngineLayer;
 
 namespace MetaLive
 {
     public class DynamicExclusionList
     {
+        //private SinglePpmAroundZeroSearchMode _exclusionPpmTolerance = new SinglePpmAroundZeroSearchMode(20);
+
         //Tuple<Mass, charge, time>
         public Queue<Tuple<double, int, DateTime>> exclusionList { get; set; }
 
@@ -22,6 +25,7 @@ namespace MetaLive
             foreach (var iv in exclusionList)
             {
                 if (value - range <= iv.Item1 && value + range >= iv.Item1)
+                //(_exclusionPpmTolerance.Accepts(value, iv.Item1)>=0)
                 {
 
                     Console.WriteLine("{0} Is In Exclusion List. Won't be place.", value);
