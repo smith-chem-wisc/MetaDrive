@@ -477,7 +477,6 @@ namespace MassSpectrometry
             }
         }
 
-
         //TO DO: speed up this function. 
         public static IEnumerable<int> ExtractIndicesByY_old(double[] Y)
         {
@@ -617,50 +616,38 @@ namespace MassSpectrometry
         }
 
         //ChargeState
-        public List<ChargeDeconEnvelope> ChargeDeconvolution(int OneBasedScanNumber, double rt, List<NeuCodeIsotopicEnvelop> isotopicEnvelopes, List<double?> selectedMs2)
+        public List<ChargeDeconEnvelope> ChargeDeconvolution(int OneBasedScanNumber, List<NeuCodeIsotopicEnvelop> isotopicEnvelopes)
         {
             List<ChargeDeconEnvelope> chargeDeconEnvelopes = new List<ChargeDeconEnvelope>();
-            SingleAbsoluteAroundZeroSearchMode massAccept = new SingleAbsoluteAroundZeroSearchMode(2.2);
             SinglePpmAroundZeroSearchMode massAcceptForNotch = new SinglePpmAroundZeroSearchMode(10);
             int i = 0;
-            bool conditioner = true;
-            while (conditioner)
+            while (i < isotopicEnvelopes.Count)
             {
-                if (i < isotopicEnvelopes.Count)
-                {
-                    var chargeDecon = new List<IsotopicEnvelope>();
-                    chargeDecon.Add(isotopicEnvelopes[i]);
+                var chargeDecon = new List<IsotopicEnvelope>();
+                chargeDecon.Add(isotopicEnvelopes[i]);
 
-                    //The j here need to be break in a better way
-                    for (int j = 1; j < 20; j++)
-                    {
-                        //Decide envelopes are from same mass or not, need better algorithm
-                        //if (i + j < isotopicEnvelopes.Count
-                        //    && massAccept.Accepts(isotopicEnvelopes[j + i].monoisotopicMass, isotopicEnvelopes[i].monoisotopicMass) == 0
-                        //    && !chargeDecon.Exists(p => p.charge == isotopicEnvelopes[j + i].charge))
-                        if (i + j < isotopicEnvelopes.Count && NotchTolerance(isotopicEnvelopes[i].monoisotopicMass, isotopicEnvelopes[j + i].monoisotopicMass, massAcceptForNotch))
-                        {
-                            if (!chargeDecon.Exists(p => p.charge == isotopicEnvelopes[j + i].charge))
-                            {
-                                chargeDecon.Add(isotopicEnvelopes[i + j]);
-                            }
-                        }
-                        else
-                        {
-                            i = i + j;
-                            break;
-                        }
-                    }
-                    //Decide the charge deconvolution distribution, need better algorithm
-                    if (chargeDecon.Count >= 3)
-                    {
-                        chargeDeconEnvelopes.Add(new ChargeDeconEnvelope(OneBasedScanNumber, rt, chargeDecon, selectedMs2));
-                    }
-                }
-                else
+                //The j here need to be break in a better way
+                for (int j = 1; j < 20; j++)
                 {
-                    conditioner = false;
+                    if (i + j < isotopicEnvelopes.Count && NotchTolerance(isotopicEnvelopes[i].monoisotopicMass, isotopicEnvelopes[j + i].monoisotopicMass, massAcceptForNotch))
+                    {
+                        if (!chargeDecon.Exists(p => p.charge == isotopicEnvelopes[j + i].charge))
+                        {
+                            chargeDecon.Add(isotopicEnvelopes[i + j]);
+                        }
+                    }
+                    else
+                    {
+                        i = i + j;
+                        break;
+                    }
                 }
+                //Decide the charge deconvolution distribution, need better algorithm
+                if (chargeDecon.Count >= 3)
+                {
+                    chargeDeconEnvelopes.Add(new ChargeDeconEnvelope(OneBasedScanNumber, chargeDecon));
+                }
+
             }
             return chargeDeconEnvelopes;
         }

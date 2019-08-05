@@ -139,9 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoxCarScan.cs" />
-    <Compile Include="ChargeDecon\ChargeDeconEnvelope.cs" />
-    <Compile Include="ChargeDecon\ChargeDeconPerMS1Scan.cs" />
-    <Compile Include="ChargeDecon\ChargeParsi.cs" />
+    <Compile Include="Deconvolution\ChargeDeconEnvelope.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="CustomScansTandemByArrival.cs" />
     <Compile Include="DataDependentScan.cs" />
@@ -160,13 +158,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MassAcceptor\SingleAbsoluteAroundZeroMassDiffAcceptor.cs" />
     <Compile Include="MassAcceptor\SinglePpmAroundZeroMassDiffAcceptor.cs" />
-    <Compile Include="Regression\GaussianModel.cs" />
-    <Compile Include="Regression\LevenbergMarquardtSolver.cs" />
-    <Compile Include="Regression\Model.cs" />
-    <Compile Include="Regression\NonlinearModel.cs" />
-    <Compile Include="Regression\NonlinearSolver.cs" />
-    <Compile Include="Regression\Solver.cs" />
-    <Compile Include="Regression\SolverOptions.cs" />
     <Compile Include="UserDefinedScan.cs" />
   </ItemGroup>
   <ItemGroup>
