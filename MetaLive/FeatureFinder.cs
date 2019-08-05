@@ -15,6 +15,35 @@ namespace MetaLive
         static double[] SugarMass = new double[10] { -406.15874, -365.13219, -203.07937, -162.05282, -146.05791, 146.05791, 162.05282, 203.07937, 365.13219, 406.15874 };
         static Tolerance tolerance = new PpmTolerance(10);
 
+        private static int GetCloestIndex(double x, double[] array)
+        {
+            if (array.Length == 0)
+            {
+                return 0;
+            }
+            int index = Array.BinarySearch(array, x);
+            if (index >= 0)
+            {
+                return index;
+            }
+            index = ~index;
+
+            if (index >= array.Length)
+            {
+                return index - 1;
+            }
+            if (index == 0)
+            {
+                return index;
+            }
+
+            if (x - array[index - 1] > array[index] - x)
+            {
+                return index;
+            }
+            return index - 1;
+        }
+
         //To use this function, the input neuCodeIsotopicEnvelops has to be ordered already by monoisotopicMass
         public static List<NeuCodeIsotopicEnvelop> ExtractGlycoMS1features(NeuCodeIsotopicEnvelop[] neuCodeIsotopicEnvelops)
         {
@@ -44,20 +73,13 @@ namespace MetaLive
 
                 foreach (var fm in families)
                 {
-                    var ind = Array.BinarySearch(masses, fm);
-                    if (ind < 0)
-                    {
-                        ind = ~ind;
-                    }
-
-                    if (ind < masses.Length && tolerance.Within(fm, masses[ind]))
+                    var ind = GetCloestIndex(fm, masses);
+               
+                    if (tolerance.Within(fm, masses[ind]))
                     {
                         matchedInd.Add(ind);
                     }
-                    else if (ind > 0 && tolerance.Within(fm, masses[ind - 1]))
-                    {
-                        matchedInd.Add(ind - 1);
-                    }
+     
                 }
 
                 if (matchedInd.Count() >= 3)
@@ -87,7 +109,7 @@ namespace MetaLive
                 }
             }
 
-            return isotopicEnvelops.OrderByDescending(p=>p.totalIntensity).ToList();
+            return isotopicEnvelops;
         }
 
     }

@@ -714,7 +714,7 @@ namespace MetaLive
         private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
         {
             //TO THINK: improve deconvolution is the key for everything!
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(50);
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(100);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -729,18 +729,18 @@ namespace MetaLive
                 allIsotops = IsotopesForGlycoFeature.isotopeList.Where(p=>!p.Item1.AlreadyExist).Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
             }
 
-            var allFeatures = FeatureFinder.ExtractGlycoMS1features(allIsotops);
+            var allFeatures = FeatureFinder.ExtractGlycoMS1features(allIsotops).OrderByDescending(P=>P.MatchedFamilyCount);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, allFeatures.Count());
 
             List<NeuCodeIsotopicEnvelop> glycoIsotope = new List<NeuCodeIsotopicEnvelop>();
 
-            int placedGlycoFeature = 0;
+            int addedGlycoFeature = 0;
             if (allFeatures.Count() > 0)
             {
                 foreach (var iso in allFeatures)
                 {
-                    if (placedGlycoFeature >= Parameters.GlycoSetting.TopN)
+                    if (addedGlycoFeature >= Parameters.GlycoSetting.TopN)
                     {
                         break;
                     }
@@ -754,17 +754,17 @@ namespace MetaLive
                             Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
                             iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
                             glycoIsotope.Add(iso);
-                            placedGlycoFeature++;
+                            addedGlycoFeature++;
                         }
                     }
                 }
             }
 
-            if (placedGlycoFeature < 5)
+            if (addedGlycoFeature < 5)
             {
                 foreach (var iso in IsotopicEnvelopes)
                 {
-                    if (placedGlycoFeature - 5 >= 0)
+                    if (addedGlycoFeature - 5 >= 0)
                     {
                         break;
                     }
@@ -777,7 +777,7 @@ namespace MetaLive
                             Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
                             iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
                             glycoIsotope.Add(iso);
-                            placedGlycoFeature++;
+                            addedGlycoFeature++;
                         }
                     }
                 }
