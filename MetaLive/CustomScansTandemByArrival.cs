@@ -22,6 +22,7 @@
 using System;
 using System.Threading;
 using System.Linq;
+using System.Collections.Generic;
 
 using Thermo.Interfaces.ExactiveAccess_V1;
 using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
@@ -30,15 +31,10 @@ using IMsScan = Thermo.Interfaces.InstrumentAccess_V2.MsScanContainer.IMsScan;
 
 namespace MetaLive
 {
-	/// <summary>
-	/// Place 10 individual scans after arrival of at least one scan.
-	/// Observe the scan IDs at different acquisition speed settings by chosing small various resolutions.
-	/// </summary>
 	class CustomScansTandemByArrival
 	{
-		int m_scanId = 1;   // must be != 0
 		IScans m_scans = null;
-        bool place10scan = true;
+
 		internal CustomScansTandemByArrival(Parameters parameters)
         {
             Parameters = parameters;
@@ -53,7 +49,7 @@ namespace MetaLive
 				{
                     m_scans.CanAcceptNextCustomScan += Scans_CanAcceptNextCustomScan;
                     IMsScanContainer orbitrap = instrument.GetMsScanContainer(0);
-					Console.WriteLine("Waiting 60 seconds for scans on detector " + orbitrap.DetectorClass + "...");
+					Console.WriteLine("Waiting for scans on detector " + orbitrap.DetectorClass + "...");
 
 					orbitrap.MsScanArrived += Orbitrap_MsScanArrived;
 					Thread.CurrentThread.Join(time);
@@ -91,17 +87,18 @@ namespace MetaLive
                 // Dump("Specific", scan.SpecificInformation);
 
                 //Dump(scan);
-                //PlaceScan(888, 1.25);
-      
-                if (place10scan)
-                {
-                    for (int i = 0; i < 10; i++)
-                    {
-                        BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
-                    }
-                    place10scan = false;
-                }
-                
+
+                var ib = IsBoxCarScan(scan);
+                Console.WriteLine("IsBoxCar Scan: {0}", ib);
+
+                FullScan.PlaceFullScan(m_scans, Parameters);
+
+                List<double> dynamicBoxCarRange = new List<double> { 600, 700, 800, 900, 1000 };
+                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, dynamicBoxCarRange);
+
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, 750);
+
+                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
             }
 		}
 
@@ -141,6 +138,8 @@ namespace MetaLive
                     Console.WriteLine("MassRanges:");
                     x = (ThermoFisher.Foundation.IO.Range[])massRanges;
                     Console.WriteLine("     {0}, {1}", x.First().Low, x.First().High);
+
+                    
                 }
             }
             catch { }
@@ -278,6 +277,42 @@ namespace MetaLive
             catch { }
 
             Console.WriteLine("----------------------------");
+        }
+
+        private bool IsBoxCarScan(IMsScan scan)
+        {
+
+            string value;
+            string valueHigh;
+            if (scan.CommonInformation.TryGetValue("LowMass", out value) && scan.CommonInformation.TryGetValue("HighMass", out valueHigh))
+            {
+                Console.WriteLine("Scan LowMass: " + value );
+            }
+
+            object massRanges;
+            ThermoFisher.Foundation.IO.Range[] x = new ThermoFisher.Foundation.IO.Range[] { };
+            if (scan.CommonInformation.TryGetRawValue("MassRanges", out massRanges))
+            {
+                x = (ThermoFisher.Foundation.IO.Range[])massRanges;
+                Console.WriteLine("MassRanges:  {0}, {1}", x.First().Low, x.First().High);
+
+                Console.WriteLine("Mass Ranges count: {0}", x.Count());
+            }
+
+
+            string massRangeCount;
+
+            if (scan.CommonInformation.TryGetValue("MassRangeCount", out massRangeCount))
+            {
+                Console.WriteLine("BoxCar Scan Boxes: {0}.", int.Parse(massRangeCount));
+
+                if (int.Parse(massRangeCount) > 1)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

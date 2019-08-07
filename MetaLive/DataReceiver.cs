@@ -568,12 +568,6 @@ namespace MetaLive
             {
                 Console.WriteLine("IsBoxCarScan: " + value + "," + Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString());
 
-                string massRangeCount;
-                if (scan.CommonInformation.TryGetValue("MassRangeCount", out massRangeCount))
-                {
-                    Console.WriteLine("BoxCar Scan Boxes: {0}.", int.Parse(massRangeCount));
-                }
-
                 if (value == Parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString() && valueHigh == Parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString())
                 {
                     return true;
@@ -581,19 +575,6 @@ namespace MetaLive
             }
             return false;
 
-            //string massRangeCount;
-
-            //if (scan.CommonInformation.TryGetValue("MassRangeCount", out massRangeCount))
-            //{
-            //    Console.WriteLine("BoxCar Scan Boxes: {0}.", int.Parse(massRangeCount));
-
-            //    if (int.Parse(massRangeCount) == Parameters.BoxCarScanSetting.BoxCarBoxes)
-            //    {
-            //        return true;
-            //    }
-            //}
-
-            //return false;
         }
 
         private void AddIsotopicEnvelope2UserDefinedScans(NeuCodeIsotopicEnvelop iso, ref int theTopN)

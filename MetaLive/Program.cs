@@ -37,7 +37,7 @@ namespace MetaLive
             if (parameters.GeneralSetting.TestMod)
             {
                 Console.WriteLine("--------------In Test Mod--------------");
-                new CustomScansTandemByArrival(parameters).DoJob(parameters.GeneralSetting.TotalTimeInMinute*60000);
+                new CustomScansTandemByArrival(parameters).DoJob(5*60000);
             }
             else
             {
