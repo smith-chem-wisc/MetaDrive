@@ -460,9 +460,6 @@ namespace MetaLive
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
                     bool isBoxCarScan = IsBoxCarScan(scan);
-
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
                     if (!isBoxCarScan)
@@ -471,17 +468,13 @@ namespace MetaLive
                         var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
                         lock (lockerScan)
                         {
-                            if (dynamicRanges.Count!=0)
+                            if (dynamicRanges.Count > 3)
                             {
                                 var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
                                 newDefinedScan.dynamicBox = dynamicRanges;
                                 UserDefinedScans.Enqueue(newDefinedScan);
                             }
-                            else
-                            {
-                                //If no dynamic box scan placed, place static box scan.
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                            }
+
                             UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                         }
                     }
@@ -703,12 +696,16 @@ namespace MetaLive
 
         private List<double> DeconvoluateDynamicBoxRange(IMsScan scan)
         {
-            List<double> dynamicRange = new List<double>();
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
 
-            //TO DO: Finish the function.
+            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
+            double max = spectrum.YArray.Max();
+            int indexMax = spectrum.YArray.ToList().IndexOf(max);
 
-            return dynamicRange;
+            var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax);
+
+            return dynamicRange.Select(p=>p.Value.Mz).ToList();
         }
 
         private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)

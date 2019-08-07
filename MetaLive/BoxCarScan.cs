@@ -78,11 +78,6 @@ namespace MetaLive
                 return;
             }
 
-            if (m_scans.PossibleParameters.Length == 0)
-            {
-                return;
-            }
-
             ICustomScan scan = m_scans.CreateCustomScan();
             scan.Values["FirstMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString();
             scan.Values["LastMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString();
