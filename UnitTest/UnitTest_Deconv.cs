@@ -159,6 +159,11 @@ namespace UnitTest
 
             var highest = ChargeDecon.FindChargesForPeak(spectrum, indUp);
 
+            var Parameters = Program.AddParametersFromFile("");
+            List<double> masses = highest.Select(p => p.Value.Mz).OrderBy(p=>p).ToList();
+            string dynamicTargets;
+            string dynamicMaxITs;
+            var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
         }
     }
 }

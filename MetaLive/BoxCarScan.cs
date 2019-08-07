@@ -101,9 +101,9 @@ namespace MetaLive
             string dynamicMaxIts;
             var dynamicBoxString = BuildDynamicBoxString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
             scan.Values["MsxInjectRanges"] = dynamicBoxString;
+            scan.Values["MsxInjectTargets"] = dynamicTargets;
+            scan.Values["MsxInjectMaxITs"] = dynamicMaxIts;
 
-            scan.Values["MsxInjectTargets"] = parameters.BoxCarScanSetting.BoxCarMsxInjectTargets;
-            scan.Values["MsxInjectMaxITs"] = parameters.BoxCarScanSetting.BoxCarMsxInjectMaxITs;
             scan.Values["MsxInjectNCEs"] = "[]";
             scan.Values["MsxInjectDirectCEs"] = "[]";
 
@@ -115,42 +115,28 @@ namespace MetaLive
         public static string BuildDynamicBoxString(Parameters parameters, List<double> dynamicBox, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
         {
             string dynamicBoxRanges = "[";
-            List<double> mzs = new List<double>();
-            foreach (var range in dynamicBox)
-            {
-                for (int i = 1; i < 60; i++)
-                {
-                    mzs.Add(range.ToMz(i));
-                }
-            }
-
-            var mzsFiltered = mzs.Where(p => p > parameters.BoxCarScanSetting.BoxCarMzRangeLowBound && p < parameters.BoxCarScanSetting.BoxCarMzRangeHighBound).OrderBy(p => p).ToList();
-
+ 
             dynamicBoxRanges += "(";
             dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.0");
             dynamicBoxRanges += ",";
-            if (mzsFiltered[0] - 5 < parameters.BoxCarScanSetting.BoxCarMzRangeLowBound)
-            {
-                dynamicBoxRanges += (mzsFiltered[0]).ToString("0.0");
-            }
-            else
-            {
-                dynamicBoxRanges += (mzsFiltered[0] - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
-            }
+
+            dynamicBoxRanges += (dynamicBox[0] - 1).ToString("0.0");
+
             dynamicBoxRanges += "),";
 
-            for (int i = 1; i < mzsFiltered.Count; i++)
+            for (int i = 1; i < dynamicBox.Count; i++)
             {
-                var mz = mzsFiltered[i];
-                var mz_front = mzsFiltered[i - 1];
+                var mz = dynamicBox[i];
+                var mz_front = dynamicBox[i - 1];
                 dynamicBoxRanges += "(";
                 dynamicBoxRanges += (mz_front + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
                 dynamicBoxRanges += ",";
                 dynamicBoxRanges += (mz - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
                 dynamicBoxRanges += "),";
             }
+
             dynamicBoxRanges += "(";
-            dynamicBoxRanges += (mzsFiltered.Last() + 5).ToString("0.0");
+            dynamicBoxRanges += (dynamicBox.Last() + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
             dynamicBoxRanges += ",";
             dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.0");
             dynamicBoxRanges += ")";
@@ -160,10 +146,10 @@ namespace MetaLive
 
             //Boxtargets and BoxMaxITs
             dynamicBoxTargets = "[";
-            for (int i = 0; i < mzsFiltered.Count + 1; i++)
+            for (int i = 0; i < dynamicBox.Count; i++)
             {
-                dynamicBoxTargets += parameters.BoxCarScanSetting.BoxCarAgcTarget / (mzsFiltered.Count + 1);
-                if (i != (mzsFiltered.Count + 1) - 1)
+                dynamicBoxTargets += parameters.BoxCarScanSetting.BoxCarAgcTarget / dynamicBox.Count;
+                if (i != dynamicBox.Count-1)
                 {
                     dynamicBoxTargets += ",";
                 }
@@ -171,10 +157,10 @@ namespace MetaLive
             dynamicBoxTargets += "]";
 
             dynamicBoxMaxITs = "[";
-            for (int i = 0; i < mzsFiltered.Count + 1; i++)
+            for (int i = 0; i < dynamicBox.Count; i++)
             {
-                dynamicBoxMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / (mzsFiltered.Count + 1);
-                if (i != (mzsFiltered.Count + 1) - 1)
+                dynamicBoxMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / dynamicBox.Count;
+                if (i != dynamicBox.Count-1)
                 {
                     dynamicBoxMaxITs += ",";
                 }

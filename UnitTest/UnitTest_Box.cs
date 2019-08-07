@@ -34,13 +34,13 @@ namespace UnitTest
         public static void dynamicBoxCarRange()
         {
             var Parameters = Program.AddParametersFromFile("");
-            List<double> masses = new List<double> { 1500 };
+            List<double> masses = new List<double> { 637.49, 666.43, 698.16 };
             string dynamicTargets;
             string dynamicMaxITs;
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
-            Assert.AreEqual(test, "[(400.0,496.0),(506.0,746.0),(756.0,1200.0)]");
+            Assert.AreEqual(test, "[(400.0,636.5),(638.5,665.4),(667.4,697.2),(699.2,1200.0)]");
             Assert.That(dynamicTargets == "[166666,166666,166666]");
-            Assert.That(dynamicMaxITs == "[20,20,20]");
+            Assert.That(dynamicMaxITs == "[84,84,84]");
         }
 
         [Test]
