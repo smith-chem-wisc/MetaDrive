@@ -22,6 +22,7 @@ namespace MassSpectrometry
 
         public double[] XArray { get; private set; }
         public double[] YArray { get; private set; }
+        public double[] XArray_log { get;  set; }
 
         static MzSpectrumBU()
         {
@@ -261,6 +262,58 @@ namespace MassSpectrometry
                     {
                         seenPeaks.Add(peak);
                     }
+                }
+            }
+
+            HashSet<double> seen = new HashSet<double>(); //Do we still need this
+
+            foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => ScoreIsotopeEnvelope(b)))
+            {
+                if (seen.Overlaps(ok.peaks.Select(b => b.mz)))
+                {
+                    continue;
+                }
+                foreach (var ah in ok.peaks.Select(b => b.mz))
+                {
+                    seen.Add(ah);
+                }
+                yield return ok;
+            }
+        }
+
+        public IEnumerable<NeuCodeIsotopicEnvelop> DeconvoluteByIntensity(MzRange theRange, DeconvolutionParameter deconvolutionParameter)
+        {
+            if (Size == 0)
+            {
+                yield break;
+            }
+
+            var isolatedMassesAndCharges = new List<NeuCodeIsotopicEnvelop>();
+
+            HashSet<double> seenPeaks = new HashSet<double>();
+            int cut = 50;
+
+            ////Deconvolution by Intensity decending order
+            foreach (var candidateForMostIntensePeak in ExtractIndicesByY())
+            {
+                if (seenPeaks.Contains(XArray[candidateForMostIntensePeak]))
+                {
+                    continue;
+                }
+
+                NeuCodeIsotopicEnvelop bestIsotopeEnvelopeForThisPeak = DeconvolutePeak(candidateForMostIntensePeak, deconvolutionParameter);
+
+                if (bestIsotopeEnvelopeForThisPeak != null && bestIsotopeEnvelopeForThisPeak.peaks.Count >= 2)
+                {
+                    isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
+                    foreach (var peak in bestIsotopeEnvelopeForThisPeak.peaks.Select(p => p.mz))
+                    {
+                        seenPeaks.Add(peak);
+                    }
+                }
+                if (isolatedMassesAndCharges.Count > cut * 2)
+                {
+                    break;
                 }
             }
 
@@ -613,54 +666,6 @@ namespace MassSpectrometry
             }
 
             return neuCodeIsotopicEnvelop;
-        }
-
-        //ChargeState
-        public List<ChargeDeconEnvelope> ChargeDeconvolution(int OneBasedScanNumber, List<NeuCodeIsotopicEnvelop> isotopicEnvelopes)
-        {
-            List<ChargeDeconEnvelope> chargeDeconEnvelopes = new List<ChargeDeconEnvelope>();
-            SinglePpmAroundZeroSearchMode massAcceptForNotch = new SinglePpmAroundZeroSearchMode(10);
-            int i = 0;
-            while (i < isotopicEnvelopes.Count)
-            {
-                var chargeDecon = new List<IsotopicEnvelope>();
-                chargeDecon.Add(isotopicEnvelopes[i]);
-
-                //The j here need to be break in a better way
-                for (int j = 1; j < 20; j++)
-                {
-                    if (i + j < isotopicEnvelopes.Count && NotchTolerance(isotopicEnvelopes[i].monoisotopicMass, isotopicEnvelopes[j + i].monoisotopicMass, massAcceptForNotch))
-                    {
-                        if (!chargeDecon.Exists(p => p.charge == isotopicEnvelopes[j + i].charge))
-                        {
-                            chargeDecon.Add(isotopicEnvelopes[i + j]);
-                        }
-                    }
-                    else
-                    {
-                        i = i + j;
-                        break;
-                    }
-                }
-                //Decide the charge deconvolution distribution, need better algorithm
-                if (chargeDecon.Count >= 3)
-                {
-                    chargeDeconEnvelopes.Add(new ChargeDeconEnvelope(OneBasedScanNumber, chargeDecon));
-                }
-
-            }
-            return chargeDeconEnvelopes;
-        }
-
-        private bool NotchTolerance(double theMass1, double theMass2, SinglePpmAroundZeroSearchMode massAccept)
-        {
-            if (massAccept.Accepts(theMass1, theMass2) == 0 || massAccept.Accepts(theMass1 + 1, theMass2) == 0
-                || massAccept.Accepts(theMass1 + 2, theMass2) == 0 || massAccept.Accepts(theMass1 + 3, theMass2) == 0
-                || massAccept.Accepts(theMass1 + 4, theMass2) == 0)
-            {
-                return true;
-            }
-            return false;
         }
 
         private void BestMonoisotopicMassForThisEnvelop(NeuCodeIsotopicEnvelop BestIsotopicEnvelop, DeconvolutionParameter deconvolutionParameter)

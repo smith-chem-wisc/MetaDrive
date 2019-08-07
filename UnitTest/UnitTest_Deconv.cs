@@ -69,7 +69,7 @@ namespace UnitTest
         [Test]
         public static void Test_RealDataDeconv()
         {            
-            string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, "20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML");
+            string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data/20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML");
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
             var scans = file.GetAllScansList();
 
@@ -142,6 +142,23 @@ namespace UnitTest
             Assert.That(neuCodeIsotopicEnvelops.Count() == 380);
         }
 
+        [Test]
+        public static void Test_ChargeDeconv()
+        {
+            string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data/2076.mzML");
+            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
+            var scans = file.GetAllScansList();
 
+            var spectrum = new MzSpectrumBU(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+
+            var spectrum_log = new MzSpectrumBU(scans.First().MassSpectrum.XArray.Select(p=>Math.Log(p)).ToArray(), scans.First().MassSpectrum.YArray, true);
+            spectrum.XArray_log = spectrum.XArray.Select(p => Math.Log(p)).ToArray();
+
+            int indUp = spectrum_log.ExtractIndicesByY().First();
+            double mass_up = spectrum.XArray[indUp];
+
+            var highest = ChargeDecon.FindChargesForPeak(spectrum, indUp);
+
+        }
     }
 }

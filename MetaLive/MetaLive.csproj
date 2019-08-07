@@ -139,7 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoxCarScan.cs" />
-    <Compile Include="Deconvolution\ChargeDeconEnvelope.cs" />
+    <Compile Include="Deconvolution\ChargeDecon.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="CustomScansTandemByArrival.cs" />
     <Compile Include="DataDependentScan.cs" />
