@@ -133,7 +133,7 @@ namespace MetaLive
 
                 double theScore = ScoreCurrentCharge(mzSpectrumBU, matchedCharges);
                 
-                if (theScore > score)
+                if (theScore >= 3 && theScore > score)  //At least 3 continues peak
                 {
                     matched_mz_z.Clear();
                     for (int j = 0; j < matchedIndexes.Count(); j++)

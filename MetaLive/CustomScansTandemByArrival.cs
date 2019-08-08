@@ -299,6 +299,12 @@ namespace MetaLive
                 Console.WriteLine("Mass Ranges count: {0}", x.Count());
             }
 
+            string msorder;
+            if (scan.CommonInformation.TryGetValue("MSOrder", out msorder))
+            {
+                Console.WriteLine("Mass Order: " + msorder);
+            }
+
 
             string massRangeCount;
 

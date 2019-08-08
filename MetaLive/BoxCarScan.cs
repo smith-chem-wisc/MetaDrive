@@ -97,6 +97,8 @@ namespace MetaLive
             scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
             scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();
 
+            
+
             string dynamicTargets;
             string dynamicMaxIts;
             var dynamicBoxString = BuildDynamicBoxString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
@@ -112,8 +114,11 @@ namespace MetaLive
 
         }
 
-        public static string BuildDynamicBoxString(Parameters parameters, List<double> dynamicBox, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
+        public static string BuildDynamicBoxString(Parameters parameters, List<double> dynamicBoxBeforeOrder, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
         {
+            //The dynamicBox list should be ordered.
+            var dynamicBox = dynamicBoxBeforeOrder.OrderBy(p => p).ToList();
+
             string dynamicBoxRanges = "[";
  
             dynamicBoxRanges += "(";
