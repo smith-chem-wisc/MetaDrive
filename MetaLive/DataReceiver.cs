@@ -468,7 +468,7 @@ namespace MetaLive
                         var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
                         lock (lockerScan)
                         {
-                            if (dynamicRanges.Count > 3)
+                            if (dynamicRanges.Count >= 3)
                             {
                                 var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
                                 newDefinedScan.dynamicBox = dynamicRanges;

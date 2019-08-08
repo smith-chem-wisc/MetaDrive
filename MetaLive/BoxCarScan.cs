@@ -117,7 +117,7 @@ namespace MetaLive
         public static string BuildDynamicBoxString(Parameters parameters, List<double> dynamicBoxBeforeOrder, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
         {
             //The dynamicBox list should be ordered.
-            var dynamicBox = dynamicBoxBeforeOrder.OrderBy(p => p).ToList();
+            var dynamicBox = dynamicBoxBeforeOrder.Where(p=>p<=parameters.BoxCarScanSetting.BoxCarMzRangeHighBound && p>=parameters.BoxCarScanSetting.BoxCarMzRangeLowBound).OrderBy(p => p).ToList();
 
             string dynamicBoxRanges = "[";
  
