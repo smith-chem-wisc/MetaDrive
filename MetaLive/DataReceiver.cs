@@ -79,7 +79,7 @@ namespace MetaLive
                     Console.WriteLine("AddScanIntoQueueAction = StaticBox.");
                     break;
                 case MethodTypes.DynamicBoxCar:
-                    AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxNoMS2;
+                    AddScanIntoQueueAction = AddScanIntoQueue_DynamicBox;
                     Console.WriteLine("AddScanIntoQueueAction = DynamicBox.");
                     break;
                 case MethodTypes.GlycoFeature:
@@ -347,7 +347,14 @@ namespace MetaLive
                                         FullScan.PlaceFullScan(m_scans, Parameters);
                                         break;
                                     case UserDefinedScanType.DataDependentScan:
-                                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+                                        if (x.dynamicBox.Count!=0)
+                                        {
+                                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.dynamicBox);
+                                        }
+                                        else
+                                        {
+                                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+                                        }
                                         break;
                                     case UserDefinedScanType.BoxCarScan:
                                         if (Parameters.GeneralSetting.MethodType == MethodTypes.StaticBoxCar)
@@ -452,7 +459,7 @@ namespace MetaLive
             }
         }
 
-        private void AddScanIntoQueue_DynamicBoxNoMS2(IMsScan scan)
+        private void AddScanIntoQueue_DynamicBox(IMsScan scan)
         {
             try
             {
@@ -462,27 +469,63 @@ namespace MetaLive
                     bool isBoxCarScan = IsBoxCarScan(scan);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
-                    if (!isBoxCarScan)
+                    if (Parameters.MS2ScanSetting.DoMS2) //Topdown
                     {
-                        //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
                         var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
+
                         lock (lockerScan)
                         {
-                            if (dynamicRanges.Count >= 3)
+                            if (dynamicRanges.Count!=0)
                             {
-                                var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                newDefinedScan.dynamicBox = dynamicRanges;
-                                UserDefinedScans.Enqueue(newDefinedScan);
+                                var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                                newDefinedMS2Scan.dynamicBox = dynamicRanges;
+                                UserDefinedScans.Enqueue(newDefinedMS2Scan);
                             }
 
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            if (!isBoxCarScan)
+                            {
+                                if (dynamicRanges.Count >= 3)
+                                {
+                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                    newDefinedScan.dynamicBox = dynamicRanges;
+                                    UserDefinedScans.Enqueue(newDefinedScan);
+                                }
+                                else
+                                {
+                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                                }
+                            }
+                            else
+                            {
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            }
+
+                        }
+                    }
+                    else //Intact
+                    {
+                        if (!isBoxCarScan)
+                        {
+                            //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
+                            var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
+                            lock (lockerScan)
+                            {
+                                if (dynamicRanges.Count >= 3)
+                                {
+                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                    newDefinedScan.dynamicBox = dynamicRanges;
+                                    UserDefinedScans.Enqueue(newDefinedScan);
+                                }
+
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            }
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("AddScanIntoQueue_DynamicBoxNoMS2 Exception!");
+                Console.WriteLine("AddScanIntoQueue_DynamicBox Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
