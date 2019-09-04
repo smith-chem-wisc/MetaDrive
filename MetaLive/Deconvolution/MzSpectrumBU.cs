@@ -7,14 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MetaLive;
-using EngineLayer;
 
 namespace MassSpectrometry
 {
     public class MzSpectrumBU
     {
         private const int numAveraginesToGenerate = 1500;
-        private SinglePpmAroundZeroSearchMode _neuCodePpmTolerance = new SinglePpmAroundZeroSearchMode(10);
         private static readonly double[][] allMasses = new double[numAveraginesToGenerate][];
         private static readonly double[][] allIntensities = new double[numAveraginesToGenerate][];
         private static readonly double[] mostIntenseMasses = new double[numAveraginesToGenerate];
@@ -634,7 +632,7 @@ namespace MassSpectrometry
                 var closestPeakIndex = GetClosestPeakIndex(NeuCodeMostIntesePeakMz);
                 var closestPeakmz = XArray[closestPeakIndex.Value];
                 var closestPeakIntensity = YArray[closestPeakIndex.Value];
-                if (closestPeakmz != MostIntensePeakMz && _neuCodePpmTolerance.Accepts(closestPeakmz.ToMass(BestIsotopicEnvelop.charge), NeuCodeMostIntesePeakMz.ToMass(BestIsotopicEnvelop.charge)) >= 0)
+                if (closestPeakmz != MostIntensePeakMz && new PpmTolerance(deconvolutionParameter.ParterMassTolerance).Within(closestPeakmz.ToMass(BestIsotopicEnvelop.charge), NeuCodeMostIntesePeakMz.ToMass(BestIsotopicEnvelop.charge)))
                 {
                     var test = GetEnvelopForPeakAtChargeState(closestPeakmz, closestPeakIntensity, BestIsotopicEnvelop.massIndex, BestIsotopicEnvelop.charge, deconvolutionParameter);
                     if (ScoreIsotopeEnvelope(test) > ScoreIsotopeEnvelope(neuCodeIsotopicEnvelop))

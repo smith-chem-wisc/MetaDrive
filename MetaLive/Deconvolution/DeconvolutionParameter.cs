@@ -14,6 +14,7 @@ namespace MetaLive
             NeuCodeMassDefect = 32.7;
             MaxmiumNeuCodeNumber = 3;
             NeuCodePairRatio = 1;
+            ParterMassTolerance = 10;
         }
 
         public double DeconvolutionIntensityRatio { get;  set; }
@@ -25,5 +26,6 @@ namespace MetaLive
         public double NeuCodeMassDefect { get; set; }
         public int MaxmiumNeuCodeNumber { get; set; }
         public double NeuCodePairRatio { get; set; }
+        public double ParterMassTolerance { get; set; }
     }
 }
