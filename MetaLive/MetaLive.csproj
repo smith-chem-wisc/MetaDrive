@@ -139,12 +139,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoxCarScan.cs" />
-    <Compile Include="Deconvolution_old\ChargeDecon.cs" />
+    <Compile Include="Deconvolution\ChargeDecon.cs" />
+    <Compile Include="Deconvolution\ChargeEnvelop.cs" />
+    <Compile Include="Deconvolution\DeconvolutionParameter.cs" />
+    <Compile Include="Deconvolution\IsoDecon.cs" />
+    <Compile Include="Deconvolution\IsoEnvelop.cs" />
+    <Compile Include="Deconvolution\MzSpectrumXY.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="CustomScansTandemByArrival.cs" />
     <Compile Include="DataDependentScan.cs" />
     <Compile Include="DataReceiver.cs" />
-    <Compile Include="Deconvolution_old\DeconvolutionParameter.cs" />
     <Compile Include="DynamicExclusionList.cs" />
     <Compile Include="FeatureFinder.cs" />
     <Compile Include="FullScan.cs" />

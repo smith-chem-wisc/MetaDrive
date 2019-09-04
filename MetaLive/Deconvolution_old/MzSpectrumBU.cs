@@ -617,7 +617,7 @@ namespace MassSpectrometry
             List<int> range = new List<int>();
 
 
-            for (int i = -deconvolutionParameter.MaxmiumNeuCodeNumber; i <= deconvolutionParameter.MaxmiumNeuCodeNumber; i++)
+            for (int i = -deconvolutionParameter.MaxmiumLabelNumber; i <= deconvolutionParameter.MaxmiumLabelNumber; i++)
             {
                 if (i != 0)
                 {
@@ -627,7 +627,7 @@ namespace MassSpectrometry
 
             foreach (var i in range)
             {
-                var NeuCodeMostIntesePeakMz = MostIntensePeakMz + deconvolutionParameter.NeuCodeMassDefect * i / BestIsotopicEnvelop.charge/1000;
+                var NeuCodeMostIntesePeakMz = MostIntensePeakMz + deconvolutionParameter.PartnerMassDiff * i / BestIsotopicEnvelop.charge/1000;
 
                 var closestPeakIndex = GetClosestPeakIndex(NeuCodeMostIntesePeakMz);
                 var closestPeakmz = XArray[closestPeakIndex.Value];

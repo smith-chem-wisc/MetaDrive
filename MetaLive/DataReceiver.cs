@@ -722,12 +722,12 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
             double max = spectrum.YArray.Max();
             int indexMax = spectrum.YArray.ToList().IndexOf(max);
 
-            var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax);
+            var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, new DeconvolutionParameter());
 
             return dynamicRange.Select(p=>p.Value.Mz).ToList();
         }
