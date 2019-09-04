@@ -4,10 +4,6 @@ namespace MassSpectrometry
 {
     public class DeconvolutionParameter
     {
-        private double _deconvolutionMassTolerance = 0;
-
-        private double _partnerMassTolerance = 0;
-
         public DeconvolutionParameter()
         {
             DeconvolutionMinAssumedChargeState = 2;
@@ -24,39 +20,19 @@ namespace MassSpectrometry
         public double DeconvolutionIntensityRatio { get; set; }
         public int DeconvolutionMinAssumedChargeState { get; set; }
         public int DeconvolutionMaxAssumedChargeState { get; set; }
-        public double DeconvolutionMassTolerance
-        {
-            get
-            {
-                return _deconvolutionMassTolerance;
-            }
-            set
-            {
-                _deconvolutionMassTolerance = value;
-            }
-        }
+        public double DeconvolutionMassTolerance { get; set; }
 
 
         public double PartnerMassDiff { get; set; }
         public int MaxmiumLabelNumber { get; set; }
         public double PartnerPairRatio { get; set; }
-        public double ParterMassTolerance
-        {
-            get
-            {
-                return _partnerMassTolerance;
-            }
-            set
-            {
-                _partnerMassTolerance = value;
-            }
-        }
+        public double ParterMassTolerance { get; set; }
 
         public Tolerance DeconvolutionAcceptor
         {
             get
             {
-                return new PpmTolerance(_deconvolutionMassTolerance);
+                return new PpmTolerance(DeconvolutionMassTolerance);
             }
         }
 
@@ -64,7 +40,7 @@ namespace MassSpectrometry
         {
             get
             {
-                return new PpmTolerance(_partnerMassTolerance);
+                return new PpmTolerance(ParterMassTolerance);
             }
         }
     }
