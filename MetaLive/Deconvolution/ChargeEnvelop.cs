@@ -35,5 +35,13 @@ namespace MassSpectrometry
         //The Intensity of Matched Peaks / Intensity of Whole spectrum
         public double MatchedIntensityRatio { get; set; }
 
+        public List<double> mzs
+        {
+            get
+            {
+                return distributions.Select(p => p.peak.Mz).ToList();
+            }
+        }
+
     }
 }

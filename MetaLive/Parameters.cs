@@ -10,7 +10,7 @@ namespace MetaLive
         StaticBoxCar = 1,
         DynamicBoxCar = 2,
         GlycoFeature = 3,
-        NeuCode = 4
+        Partner = 4
     }
 
     public class Parameters
@@ -48,6 +48,7 @@ namespace MetaLive
         public double BoxCarMzRangeHighBound { get; set; }
         public int BoxCarMicroScans { get; set; }
         public double DynamicBlockSize { get; set; }
+        public bool DynamicBoxCarOnlyForMS2 { get; set; }
 
         //TO DO: The BoxCar Ranges should be optimized based on real data
         public string[] BoxCarMsxInjectRanges

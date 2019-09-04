@@ -63,7 +63,6 @@ namespace MetaLive
         internal DataReceiver(Parameters parameters)
         {
             Parameters = parameters;
-            DeconvolutionParameter = new DeconvolutionParameter();
             UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
             IsotopesForGlycoFeature = new IsotopesForGlycoFeature();
@@ -86,7 +85,7 @@ namespace MetaLive
                     AddScanIntoQueueAction = AddScanIntoQueue_Glyco;
                     Console.WriteLine("AddScanIntoQueueAction = Glyco.");
                     break;
-                case MethodTypes.NeuCode:
+                case MethodTypes.Partner:
                     AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
                     Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
                     break;
@@ -469,58 +468,69 @@ namespace MetaLive
                     bool isBoxCarScan = IsBoxCarScan(scan);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
-                    if (Parameters.MS2ScanSetting.DoMS2) //Topdown
+                    if (!isBoxCarScan)
                     {
-                        var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
-
-                        lock (lockerScan)
+                        if (Parameters.MS2ScanSetting.DoMS2) //Topdown
                         {
-                            if (dynamicRanges.Count!=0)
+                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
+
+                            if (chargeEnvelops.Count > 0)
                             {
-                                var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                                newDefinedMS2Scan.dynamicBox = dynamicRanges;
-                                UserDefinedScans.Enqueue(newDefinedMS2Scan);
+                                lock (lockerScan)
+                                {
+                                    if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
+                                    {
+                                        //Add BoxCar Scan
+                                        var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                        newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs).ToList();
+                                        UserDefinedScans.Enqueue(newDefinedScan);
+                                    }
+
+                                    //Add BoxCar-MS2 Scan
+                                    foreach (var ce in chargeEnvelops.Take(2))
+                                    {
+                                        var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                                        newDefinedMS2Scan.dynamicBox = ce.mzs;
+                                        UserDefinedScans.Enqueue(newDefinedMS2Scan);
+
+                                        //Here is just to test dynamic boxcar is better for MS2 scan.
+                                        var anotherNewDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                                        anotherNewDefinedMS2Scan.Mz = ce.FirstMz;
+                                        UserDefinedScans.Enqueue(anotherNewDefinedMS2Scan);
+                                    }
+
+                                }
                             }
 
-                            if (!isBoxCarScan)
-                            {
-                                if (dynamicRanges.Count >= 3)
-                                {
-                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                    newDefinedScan.dynamicBox = dynamicRanges;
-                                    UserDefinedScans.Enqueue(newDefinedScan);
-                                }
-                                else
-                                {
-                                    UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                                }
-                            }
-                            else
-                            {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            }
-
-                        }
-                    }
-                    else //Intact
-                    {
-                        if (!isBoxCarScan)
-                        {
-                            //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
-                            var dynamicRanges = DeconvoluateDynamicBoxRange(scan);
                             lock (lockerScan)
                             {
-                                if (dynamicRanges.Count >= 3)
-                                {
-                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                    newDefinedScan.dynamicBox = dynamicRanges;
-                                    UserDefinedScans.Enqueue(newDefinedScan);
-                                }
-
                                 UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                             }
+
+                        }
+                        else //Intact
+                        {
+                            //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
+                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
+                            lock (lockerScan)
+                            {
+
+                                if (chargeEnvelops.Count > 0)
+                                {
+                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                    newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs).ToList();
+                                    UserDefinedScans.Enqueue(newDefinedScan);
+                                }
+                            }
+
+                            lock (lockerScan)
+                            {
+                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            }
+
                         }
                     }
+
                 }
             }
             catch (Exception e)
@@ -718,18 +728,21 @@ namespace MetaLive
             DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
 
-        private List<double> DeconvoluateDynamicBoxRange(IMsScan scan)
+        private List<ChargeEnvelop> DeconvoluateDynamicBoxRange(IMsScan scan)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
 
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
-            double max = spectrum.YArray.Max();
-            int indexMax = spectrum.YArray.ToList().IndexOf(max);
+            //double max = spectrum.YArray.Max();
+            //int indexMax = spectrum.YArray.ToList().IndexOf(max);
 
-            var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, new DeconvolutionParameter());
+            //var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, DeconvolutionParameter);
+            //return dynamicRange.Select(p => p.Value.Mz).ToList();
 
-            return dynamicRange.Select(p=>p.Value.Mz).ToList();
+            var chargeEnvelops = ChargeDecon.FindChargesForScan(spectrum, DeconvolutionParameter);
+
+            return chargeEnvelops;    
         }
 
         private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)

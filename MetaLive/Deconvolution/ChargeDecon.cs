@@ -151,7 +151,7 @@ namespace MassSpectrometry
 
             foreach (var peakIndex in mzSpectrumXY.ExtractIndicesByY())
             {
-                if (seenPeakIndex.Contains(peakIndex))
+                if (seenPeakIndex.Contains(peakIndex) && chargeEnvelops.Count() >= 5) //Set chargeEnvelops.Count() >= 5 is to increase the real-time deconvolution time
                 {
                     continue;
                 }
