@@ -151,7 +151,12 @@ namespace MassSpectrometry
 
             foreach (var peakIndex in mzSpectrumXY.ExtractIndicesByY())
             {
-                if (seenPeakIndex.Contains(peakIndex) && chargeEnvelops.Count() >= 5) //Set chargeEnvelops.Count() >= 5 is to increase the real-time deconvolution time
+                if (chargeEnvelops.Count() >= 5) //Set chargeEnvelops.Count() >= 5 is to increase the real-time deconvolution time
+                {
+                    break;
+                }
+
+                if (seenPeakIndex.Contains(peakIndex)) 
                 {
                     continue;
                 }
@@ -201,5 +206,53 @@ namespace MassSpectrometry
             return chargeEnvelops;
         }
 
+        public static List<ChargeEnvelop> QuickFindChargesForScan(MzSpectrumXY mzSpectrumXY, DeconvolutionParameter deconvolutionParameter)
+        {
+            List<ChargeEnvelop> chargeEnvelops = new List<ChargeEnvelop>();
+
+            HashSet<double> seenMz = new HashSet<double>();
+
+            var indByY = mzSpectrumXY.ExtractIndicesByY();
+            foreach (var peakIndex in indByY)
+            {
+
+                if (chargeEnvelops.Count >= 5 && mzSpectrumXY.YArray[peakIndex] / mzSpectrumXY.YArray[indByY.First()] > 0.02)
+                {
+                    break;
+                }
+
+                if (PeakSeenInRange(mzSpectrumXY.XArray[peakIndex], seenMz))
+                {
+                    continue;
+                }
+
+                var mz_zs = FindChargesForPeak(mzSpectrumXY, peakIndex, deconvolutionParameter);
+
+                if (mz_zs.Count > 3)
+                {
+                    var chargeEnve = new ChargeEnvelop(peakIndex, mzSpectrumXY.XArray[peakIndex], mzSpectrumXY.YArray[peakIndex]);
+                    foreach (var mzz in mz_zs)
+                    {
+                        seenMz.Add(mzz.Value.Mz);
+                        chargeEnve.distributions.Add((mzz.Key, mzz.Value, null));
+                    }
+                    chargeEnvelops.Add(chargeEnve);
+                }
+            }
+
+            return chargeEnvelops;
+        }
+
+        private static bool PeakSeenInRange(double theMz, HashSet<double> seenMz, double range = 0.5)
+        {
+            foreach (var mz in seenMz)
+            {
+                if (theMz >= mz - range && theMz <= mz + range)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

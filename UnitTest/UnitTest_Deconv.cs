@@ -149,12 +149,30 @@ namespace UnitTest
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
             var scans = file.GetAllScansList();
 
-            var spectrum = new MzSpectrumXY(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
+            deconvolutionParameter.DeconvolutionMaxAssumedChargeState = 60;
 
+            Stopwatch stopwatch0 = new Stopwatch();
+            stopwatch0.Start();
+            var spectrum = new MzSpectrumXY(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+            stopwatch0.Stop();
+
+            Stopwatch stopwatch1 = new Stopwatch();
+            stopwatch1.Start();          
+            var x = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
+            stopwatch1.Stop();
+
+            Stopwatch stopwatch2 = new Stopwatch();
+            stopwatch2.Start();
+            var x2 = ChargeDecon.QuickFindChargesForScan(spectrum, deconvolutionParameter);
+            stopwatch2.Stop();
+
+            Stopwatch stopwatch3 = new Stopwatch();
+            stopwatch3.Start();
             int indUp = spectrum.ExtractIndicesByY().First();
             double mass_up = spectrum.XArray[indUp];
-
             var highest = ChargeDecon.FindChargesForPeak(spectrum, indUp, new DeconvolutionParameter());
+            stopwatch3.Stop();
 
             var Parameters = Program.AddParametersFromFile("");
             List<double> masses = highest.Select(p => p.Value.Mz).ToList();

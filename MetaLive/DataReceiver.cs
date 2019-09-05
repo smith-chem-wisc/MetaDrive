@@ -736,11 +736,10 @@ namespace MetaLive
 
             //double max = spectrum.YArray.Max();
             //int indexMax = spectrum.YArray.ToList().IndexOf(max);
-
             //var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, DeconvolutionParameter);
             //return dynamicRange.Select(p => p.Value.Mz).ToList();
 
-            var chargeEnvelops = ChargeDecon.FindChargesForScan(spectrum, DeconvolutionParameter);
+            var chargeEnvelops = ChargeDecon.QuickFindChargesForScan(spectrum, DeconvolutionParameter);
 
             return chargeEnvelops;    
         }
