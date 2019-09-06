@@ -186,27 +186,27 @@ namespace MetaLive
             
             var firstMass = (dynamicBox[0] - parameters.BoxCarScanSetting.DynamicBlockSize < parameters.BoxCarScanSetting.BoxCarMzRangeLowBound) ? 
                 parameters.BoxCarScanSetting.BoxCarMzRangeLowBound : dynamicBox[0] - parameters.BoxCarScanSetting.DynamicBlockSize;
-            dynamicBoxRanges += firstMass.ToString("0.0");
+            dynamicBoxRanges += firstMass.ToString("0.000");
             dynamicBoxRanges += ",";
-            dynamicBoxRanges += (dynamicBox[0] + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+            dynamicBoxRanges += (dynamicBox[0] + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.000");
             dynamicBoxRanges += "),";
 
             for (int i = 1; i < dynamicBox.Count-1; i++)
             {
                 dynamicBoxRanges += "(";
-                dynamicBoxRanges += (dynamicBox[i] - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+                dynamicBoxRanges += (dynamicBox[i] - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.000");
                 dynamicBoxRanges += ",";
-                dynamicBoxRanges += (dynamicBox[i] + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+                dynamicBoxRanges += (dynamicBox[i] + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.000");
                 dynamicBoxRanges += "),";
             }
 
             dynamicBoxRanges += "(";
-            dynamicBoxRanges += (dynamicBox.Last() - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+            dynamicBoxRanges += (dynamicBox.Last() - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.000");
             dynamicBoxRanges += ",";
 
             var lastMass = (dynamicBox.Last() + parameters.BoxCarScanSetting.DynamicBlockSize > parameters.BoxCarScanSetting.BoxCarMzRangeHighBound) ? 
                 parameters.BoxCarScanSetting.BoxCarMzRangeHighBound : dynamicBox.Last() + parameters.BoxCarScanSetting.DynamicBlockSize;
-            dynamicBoxRanges += lastMass.ToString("0.0");
+            dynamicBoxRanges += lastMass.ToString("0.000");
             dynamicBoxRanges += ")";
 
             dynamicBoxRanges += "]";

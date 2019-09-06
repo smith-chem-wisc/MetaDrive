@@ -95,7 +95,6 @@ namespace MetaLive
         }
 
         Parameters Parameters { get; set; }
-        DeconvolutionParameter DeconvolutionParameter { get; set; }
         Queue<UserDefinedScan> UserDefinedScans { get; set; }
         DynamicExclusionList DynamicExclusionList { get; set; }
         IsotopesForGlycoFeature IsotopesForGlycoFeature { get; set; } 
@@ -472,22 +471,24 @@ namespace MetaLive
                     {
                         if (Parameters.MS2ScanSetting.DoMS2) //Topdown
                         {
-                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
+                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan).Take(2).ToList();
 
                             if (chargeEnvelops.Count > 0)
                             {
                                 lock (lockerScan)
                                 {
+                                    Console.WriteLine("chargeEnvelops.Count: {0}, Add BoxCar Scan dynamic boxes {1}", chargeEnvelops.Count, chargeEnvelops.SelectMany(p => p.mzs).ToList().Count());
+
                                     if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
                                     {
                                         //Add BoxCar Scan
                                         var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                        newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs).ToList();
+                                        newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs).ToList();
                                         UserDefinedScans.Enqueue(newDefinedScan);
                                     }
 
                                     //Add BoxCar-MS2 Scan
-                                    foreach (var ce in chargeEnvelops.Take(2))
+                                    foreach (var ce in chargeEnvelops)
                                     {
                                         var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
                                         newDefinedMS2Scan.dynamicBox = ce.mzs;
@@ -662,7 +663,7 @@ namespace MetaLive
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum", DateTime.Now);
 
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter);
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, Parameters.DeconvolutionParameter);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -699,7 +700,7 @@ namespace MetaLive
                 {
                     continue;
                 }
-                var iso = spectrum.DeconvolutePeak(peakIndex, DeconvolutionParameter);
+                var iso = spectrum.DeconvolutePeak(peakIndex, Parameters.DeconvolutionParameter);
                 if (iso == null)
                 {
                     continue;
@@ -739,7 +740,7 @@ namespace MetaLive
             //var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, DeconvolutionParameter);
             //return dynamicRange.Select(p => p.Value.Mz).ToList();
 
-            var chargeEnvelops = ChargeDecon.QuickFindChargesForScan(spectrum, DeconvolutionParameter);
+            var chargeEnvelops = ChargeDecon.QuickFindChargesForScan(spectrum, Parameters.DeconvolutionParameter);
 
             return chargeEnvelops;    
         }
@@ -747,7 +748,7 @@ namespace MetaLive
         private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
         {
             //TO THINK: improve deconvolution is the key for everything!
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(100);
+            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, Parameters.DeconvolutionParameter).OrderByDescending(p=>p.totalIntensity).Take(100);
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
 
@@ -875,7 +876,7 @@ namespace MetaLive
                 {
                     continue;
                 }
-                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, DeconvolutionParameter);
+                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, Parameters.DeconvolutionParameter);
 
                 if (iso == null)
                 {
@@ -940,7 +941,7 @@ namespace MetaLive
                 {
                     continue;
                 }
-                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, DeconvolutionParameter);
+                var iso = spectrum.DeconvolutePeak_NeuCode(peakIndex, Parameters.DeconvolutionParameter);
 
                 if (iso == null)
                 {

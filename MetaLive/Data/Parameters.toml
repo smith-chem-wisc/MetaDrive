@@ -18,7 +18,7 @@ BoxCarNormCharge = 2
 BoxCarMzRangeLowBound = 400.0
 BoxCarMzRangeHighBound = 1200.0
 BoxCarMicroScans = 1
-DynamicBlockSize = 1.0
+DynamicBlockSize = 0.5
 DynamicBoxCarOnlyForMS2 = false
 
 [FullScanSetting]

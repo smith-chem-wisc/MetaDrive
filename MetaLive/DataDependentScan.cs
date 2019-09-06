@@ -102,7 +102,7 @@ namespace MetaLive
 
             string dynamicTargets;
             string dynamicMaxIts;
-            var dynamicBoxString = BoxCarScan.BuildDynamicBoxString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
+            var dynamicBoxString = BoxCarScan.BuildDynamicBoxInclusionString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
             scan.Values["MsxInjectRanges"] = dynamicBoxString;
             scan.Values["MsxInjectTargets"] = dynamicTargets;
             scan.Values["MsxInjectMaxITs"] = dynamicMaxIts;
