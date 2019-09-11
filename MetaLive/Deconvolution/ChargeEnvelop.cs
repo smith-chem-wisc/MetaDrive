@@ -35,11 +35,21 @@ namespace MassSpectrometry
         //The Intensity of Matched Peaks / Intensity of Whole spectrum
         public double MatchedIntensityRatio { get; set; }
 
-        public List<double> mzs
+        //The number for ms2 box_car should be related with intensity
+        public int Count_box
         {
             get
             {
-                return distributions.Select(p => p.peak.Mz).ToList();
+                int count = distributions.Count() / 2;
+                return count > 6 ? 6 : count;
+            }
+        }
+
+        public List<double> mzs_box
+        {
+            get
+            {
+                return distributions.OrderByDescending(p=>p.peak.Intensity).Take(Count_box).OrderBy(p => p.peak.Intensity).Select(p => p.peak.Mz).ToList();
             }
         }
 

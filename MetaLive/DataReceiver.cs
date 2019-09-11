@@ -477,13 +477,13 @@ namespace MetaLive
                             {
                                 lock (lockerScan)
                                 {
-                                    Console.WriteLine("chargeEnvelops.Count: {0}, Add BoxCar Scan dynamic boxes {1}", chargeEnvelops.Count, chargeEnvelops.SelectMany(p => p.mzs).ToList().Count());
+                                    Console.WriteLine("chargeEnvelops.Count: {0}, Add BoxCar Scan dynamic boxes {1}", chargeEnvelops.Count, chargeEnvelops.SelectMany(p => p.mzs_box).ToList().Count());
 
                                     if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
                                     {
                                         //Add BoxCar Scan
                                         var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                        newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs).ToList();
+                                        newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
                                         UserDefinedScans.Enqueue(newDefinedScan);
                                     }
 
@@ -491,7 +491,7 @@ namespace MetaLive
                                     foreach (var ce in chargeEnvelops)
                                     {
                                         var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                                        newDefinedMS2Scan.dynamicBox = ce.mzs;
+                                        newDefinedMS2Scan.dynamicBox = ce.mzs_box;
                                         UserDefinedScans.Enqueue(newDefinedMS2Scan);
 
                                         //Here is just to test dynamic boxcar is better for MS2 scan.
@@ -519,7 +519,7 @@ namespace MetaLive
                                 if (chargeEnvelops.Count > 0)
                                 {
                                     var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                    newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs).ToList();
+                                    newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs_box).ToList();
                                     UserDefinedScans.Enqueue(newDefinedScan);
                                 }
                             }

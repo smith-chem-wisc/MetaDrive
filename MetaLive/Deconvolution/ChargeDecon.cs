@@ -65,18 +65,20 @@ namespace MassSpectrometry
             return mz_z;
         }
 
-        private static double ScoreCurrentCharge(MzSpectrumXY mzSpectrumBU_log, List<int> matchedCharges)
+        private static double ScoreCurrentCharge(Dictionary<int, MzPeak> the_matched_mz_z)
         {
+            List<int> matchedCharges = the_matched_mz_z.Keys.ToList();
+
             List<int> continuousChangeLength = new List<int>();
 
-            if (matchedCharges.Count <= 1)
+            if (the_matched_mz_z.Count <= 1)
             {
                 return 1;
             }
 
             int i = 0;
             int theChargeLength = 1;
-            while (i < matchedCharges.Count() - 1)
+            while (i < the_matched_mz_z.Count() - 1)
             {
                 int diff = matchedCharges[i + 1] - matchedCharges[i] - 1;
                 if (diff == 0)
@@ -96,7 +98,16 @@ namespace MassSpectrometry
                 }
             }
 
-            return continuousChangeLength.Max();
+            var x = continuousChangeLength.OrderByDescending(p=>p).ToList();
+
+            if (x.Count > 1)
+            {
+                return x[0] + x[1] - 1;
+            }
+            else
+            {
+                return x[0];
+            }
 
         }
 
@@ -113,8 +124,7 @@ namespace MassSpectrometry
             {
                 var mz_z = GenerateMzs(mz, i);
 
-                List<int> matchedIndexes = new List<int>();
-                List<int> matchedCharges = new List<int>();
+                Dictionary<int, MzPeak> the_matched_mz_z = new Dictionary<int, MzPeak>();
 
                 foreach (var amz in mz_z)
                 {
@@ -122,22 +132,23 @@ namespace MassSpectrometry
 
                     if (tolerance.Within(amz.Value, mzSpectrumXY.XArray[ind]))
                     {
-                        matchedIndexes.Add(ind);
-                        matchedCharges.Add(amz.Key);
-                    }
+                        the_matched_mz_z.Add(amz.Key, new MzPeak(mzSpectrumXY.XArray[ind], mzSpectrumXY.YArray[ind]));
+                    }                  
                 }
 
-                double theScore = ScoreCurrentCharge(mzSpectrumXY, matchedCharges);
+                
 
-                if (theScore > score)
+                if (the_matched_mz_z.Count >= 5 )
                 {
-                    matched_mz_z.Clear();
-                    for (int j = 0; j < matchedIndexes.Count(); j++)
+                    double theScore = ScoreCurrentCharge(the_matched_mz_z);
+
+                    if (theScore > score && theScore >= 5)
                     {
-                        matched_mz_z.Add(matchedCharges[j], new MzPeak(mzSpectrumXY.XArray[matchedIndexes[j]], mzSpectrumXY.YArray[matchedIndexes[j]]));                      
+                        matched_mz_z = the_matched_mz_z;
+
+                        score = theScore;
                     }
 
-                    score = theScore;
                 }
             }
 
@@ -156,7 +167,7 @@ namespace MassSpectrometry
                     break;
                 }
 
-                if (seenPeakIndex.Contains(peakIndex)) 
+                if (seenPeakIndex.Contains(peakIndex))
                 {
                     continue;
                 }
@@ -198,6 +209,8 @@ namespace MassSpectrometry
                     if (chargeEnve.UnUsedMzsRatio < 0.1 && chargeEnve.IsoEnveNum >=1)
                     {
                         chargeEnve.MatchedIntensityRatio = matched_intensities / mzSpectrumXY.TotalIntensity;
+
+
                         chargeEnvelops.Add(chargeEnve);
                     }
                 }
@@ -215,8 +228,7 @@ namespace MassSpectrometry
             var indByY = mzSpectrumXY.ExtractIndicesByY();
             foreach (var peakIndex in indByY)
             {
-
-                if (chargeEnvelops.Count >= 5 && mzSpectrumXY.YArray[peakIndex] / mzSpectrumXY.YArray[indByY.First()] > 0.02)
+                if (chargeEnvelops.Count >= 5 || mzSpectrumXY.YArray[peakIndex] / mzSpectrumXY.YArray[indByY.First()] < 0.02)
                 {
                     break;
                 }
@@ -228,7 +240,7 @@ namespace MassSpectrometry
 
                 var mz_zs = FindChargesForPeak(mzSpectrumXY, peakIndex, deconvolutionParameter);
 
-                if (mz_zs.Count > 3)
+                if (mz_zs.Count >= 5)
                 {
                     var chargeEnve = new ChargeEnvelop(peakIndex, mzSpectrumXY.XArray[peakIndex], mzSpectrumXY.YArray[peakIndex]);
                     foreach (var mzz in mz_zs)
@@ -243,7 +255,7 @@ namespace MassSpectrometry
             return chargeEnvelops;
         }
 
-        private static bool PeakSeenInRange(double theMz, HashSet<double> seenMz, double range = 0.5)
+        private static bool PeakSeenInRange(double theMz, HashSet<double> seenMz, double range = 0.7)
         {
             foreach (var mz in seenMz)
             {
@@ -254,5 +266,6 @@ namespace MassSpectrometry
             }
             return false;
         }
+
     }
 }
