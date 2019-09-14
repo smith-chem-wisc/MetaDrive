@@ -40,7 +40,7 @@ namespace MassSpectrometry
         {
             get
             {
-                int count = distributions.Count() / 2;
+                int count = distributions.Count()*2/3;
                 return count > 6 ? 6 : count;
             }
         }

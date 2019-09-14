@@ -10,6 +10,7 @@ using System.Threading;
 using System.IO;
 using MetaLive;
 using IO.MzML;
+using MzLibUtil;
 
 namespace UnitTest
 {
@@ -158,7 +159,7 @@ namespace UnitTest
             stopwatch0.Stop();
 
             Stopwatch stopwatch1 = new Stopwatch();
-            stopwatch1.Start();          
+            stopwatch1.Start();
             var x = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
             stopwatch1.Stop();
 

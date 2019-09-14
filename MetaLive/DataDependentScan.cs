@@ -20,7 +20,13 @@ namespace MetaLive
 
             double Range = parameters.MS1IonSelecting.IsolationWindow;
             string xl = (mz - Range).ToString("0.000");
-            string xh = (mz + Range).ToString("0.000");            
+            string xh = (mz + Range).ToString("0.000");
+            if (mz-Range < 50.0)
+            {
+                Console.WriteLine("placing data dependent ms2 scan wrong, the Ms2MzRangeLowBound should larger than 50!!!");
+
+                return;
+            }
             ICustomScan scan = m_scans.CreateCustomScan();
 
             scan.Values["FirstMass"] = parameters.MS2ScanSetting.MS2MzRangeLowBound.ToString();

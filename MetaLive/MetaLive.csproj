@@ -149,6 +149,7 @@
     <Compile Include="CustomScansTandemByArrival.cs" />
     <Compile Include="DataDependentScan.cs" />
     <Compile Include="DataReceiver.cs" />
+    <Compile Include="DynamicDBCExclusionList.cs" />
     <Compile Include="DynamicExclusionList.cs" />
     <Compile Include="FeatureFinder.cs" />
     <Compile Include="FullScan.cs" />
