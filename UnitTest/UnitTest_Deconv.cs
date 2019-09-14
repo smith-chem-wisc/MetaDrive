@@ -12,6 +12,7 @@ using MetaLive;
 using IO.MzML;
 using MzLibUtil;
 
+
 namespace UnitTest
 {
     [TestFixture]
@@ -179,7 +180,11 @@ namespace UnitTest
             List<double> masses = highest.Select(p => p.Value.Mz).ToList();
             string dynamicTargets;
             string dynamicMaxITs;
+
+            Stopwatch stopwatch4 = new Stopwatch();
+            stopwatch4.Start();
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
+            stopwatch4.Stop();
             Assert.That(test == "[(400.0,522.8),(524.8,542.2),(544.2,563.1),(565.1,585.6),(587.6,610.0),(612.0,636.5),(638.5,665.4),(667.4,697.1),(699.1,732.0),(734.0,770.5),(772.5,813.3),(815.3,861.1),(863.1,915.0),(917.0,976.0),(978.0,1045.7),(1047.7,1126.1),(1128.1,1200.0)]");
         }
     }
