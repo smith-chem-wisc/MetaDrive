@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace MassSpectrometry
 {
@@ -21,6 +22,34 @@ namespace MassSpectrometry
 
         public double FirstIntensity { get; set; }
 
+        public List<MzPeak> AllMzPeak
+        {
+            get
+            {
+                List<MzPeak> mzs = new List<MzPeak>();
+                foreach (var d in distributions)
+                {
+                    if (d.isoEnvelop!=null)
+                    {
+                        mzs.AddRange(d.isoEnvelop.ExperimentIsoEnvelop);
+                    }
+                    else
+                    {
+                        mzs.Add(d.peak);
+                    }
+                }
+                return mzs;
+            }
+        }
+
+        public double ChargeDeconScore
+        {
+            get
+            {
+                return distributions.Where(p=>p.isoEnvelop!=null).Sum(p => p.isoEnvelop.MsDeconvScore);
+            }
+        }
+
         //The peaks used match for current Charge Envelop / The peaks already been used.
         public double UnUsedMzsRatio { get; set; }
 
@@ -32,15 +61,12 @@ namespace MassSpectrometry
             }
         }
 
-        //The Intensity of Matched Peaks / Intensity of Whole spectrum
-        public double MatchedIntensityRatio { get; set; }
-
         //The number for ms2 box_car should be related with intensity
         public int Count_box
         {
             get
             {
-                int count = distributions.Count()*2/3;
+                int count = distributions.Count() * 2 / 3;
                 return count > 6 ? 6 : count;
             }
         }
@@ -49,9 +75,8 @@ namespace MassSpectrometry
         {
             get
             {
-                return distributions.OrderByDescending(p=>p.peak.Intensity).Take(Count_box).OrderBy(p => p.peak.Intensity).Select(p => p.peak.Mz).ToList();
+                return distributions.OrderByDescending(p => p.peak.Intensity).Take(Count_box).OrderBy(p => p.peak.Intensity).Select(p => p.peak.Mz).ToList();
             }
         }
-
     }
 }

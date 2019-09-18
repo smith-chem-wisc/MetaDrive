@@ -12,7 +12,6 @@ namespace MassSpectrometry
         public double[] XArray { get; private set; }
         public double[] YArray { get; private set; }
 
-        //TO DO: It is possible that it takes time to construct a class. If keep the class the same but change its property, it may save some time.
         public MzSpectrumXY(double[] mz, double[] intensities, bool shouldCopy)
         {
             if (shouldCopy)

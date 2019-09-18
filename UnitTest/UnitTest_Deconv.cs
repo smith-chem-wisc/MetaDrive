@@ -152,20 +152,25 @@ namespace UnitTest
             var scans = file.GetAllScansList();
 
             DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
-            deconvolutionParameter.DeconvolutionMaxAssumedChargeState = 60;
 
             Stopwatch stopwatch0 = new Stopwatch();
             stopwatch0.Start();
             var spectrum = new MzSpectrumXY(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
             stopwatch0.Stop();
 
+            Stopwatch stopwatch_iso = new Stopwatch();
+            stopwatch_iso.Start();
+            var iso = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, deconvolutionParameter);
+            stopwatch_iso.Stop();
+
             Stopwatch stopwatch1 = new Stopwatch();
             stopwatch1.Start();
             var x = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
             stopwatch1.Stop();
 
-            Stopwatch stopwatch2 = new Stopwatch();
-            stopwatch2.Start();
+            //Stopwatch stopwatch2 = new Stopwatch();
+            //stopwatch2.Start();
+            var stopwatch2 = Stopwatch.StartNew();
             var x2 = ChargeDecon.QuickFindChargesForScan(spectrum, deconvolutionParameter);
             stopwatch2.Stop();
 
@@ -186,6 +191,77 @@ namespace UnitTest
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
             stopwatch4.Stop();
             Assert.That(test == "[(400.0,522.8),(524.8,542.2),(544.2,563.1),(565.1,585.6),(587.6,610.0),(612.0,636.5),(638.5,665.4),(667.4,697.1),(699.1,732.0),(734.0,770.5),(772.5,813.3),(815.3,861.1),(863.1,915.0),(917.0,976.0),(978.0,1045.7),(1047.7,1126.1),(1128.1,1200.0)]");
+        }
+
+        [Test]
+        public static void Test_ChargeDeconvFile()
+        {
+            string FilepathMZML = "E:\\MassData\\20190912_TD_yeast_DBC\\20190912_Yeast7_DBC_FullScanFirst_T3_TopDown.mzML";
+            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
+            var scans = file.GetAllScansList().Where(p=>p.MsnOrder == 1).ToArray();         
+
+            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
+
+            //Stopwatch stopwatch0 = new Stopwatch();
+            //stopwatch0.Start();
+            //var spectrum = new MzSpectrumXY(scans[2167].MassSpectrum.XArray, scans[2167].MassSpectrum.YArray, true);
+            //stopwatch0.Stop();
+
+            //Stopwatch stopwatch_iso = new Stopwatch();
+            //stopwatch_iso.Start();
+            //var iso = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, deconvolutionParameter);
+            //stopwatch_iso.Stop();
+
+            //Stopwatch stopwatch1 = new Stopwatch();
+            //stopwatch1.Start();
+            //var x = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
+            //stopwatch1.Stop();
+
+            ////Stopwatch stopwatch2 = new Stopwatch();
+            ////stopwatch2.Start();
+            //var stopwatch2 = Stopwatch.StartNew();
+            //var x2 = ChargeDecon.QuickFindChargesForScan(spectrum, deconvolutionParameter);
+            //stopwatch2.Stop();
+
+
+            Tuple<int, double, long, long, long, long>[] watches = new Tuple<int, double, long, long, long, long>[scans.Length];
+
+            for (int i = 0; i < scans.Length; i++)
+            {
+                Stopwatch stopwatch0 = new Stopwatch();
+                stopwatch0.Start();
+                var spectrum = new MzSpectrumXY(scans[i].MassSpectrum.XArray, scans[i].MassSpectrum.YArray, true);
+                stopwatch0.Stop();
+
+                Stopwatch stopwatch_iso = new Stopwatch();
+                stopwatch_iso.Start();
+                //var iso = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, deconvolutionParameter);
+                stopwatch_iso.Stop();
+
+                Stopwatch stopwatch1 = new Stopwatch();
+                stopwatch1.Start();
+                //var x = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
+                stopwatch1.Stop();
+
+                //Stopwatch stopwatch2 = new Stopwatch();
+                //stopwatch2.Start();
+                var stopwatch2 = Stopwatch.StartNew();
+                var x2 = ChargeDecon.QuickChargeDeconForScan(spectrum, deconvolutionParameter);
+                stopwatch2.Stop();
+
+                watches[i] = new Tuple<int, double, long, long, long, long>(scans[i].OneBasedScanNumber, scans[i].RetentionTime, stopwatch0.ElapsedMilliseconds, stopwatch_iso.ElapsedMilliseconds, stopwatch1.ElapsedMilliseconds, stopwatch2.ElapsedMilliseconds);
+            }
+
+            var writtenFile = Path.Combine(Path.GetDirectoryName(FilepathMZML), "watches.mytsv");
+            using (StreamWriter output = new StreamWriter(writtenFile))
+            {
+                output.WriteLine("ScanNum\tRT\tConstruct\tIsoTime\tChargeDeconTime\tQuickChargeDeconTime");
+                foreach (var theEvaluation in watches.OrderBy(p => p.Item1))
+                {
+                    output.WriteLine(theEvaluation.Item1.ToString() + "\t" + theEvaluation.Item2 + "\t" + theEvaluation.Item3.ToString() + "\t" + theEvaluation.Item4.ToString() + "\t" + theEvaluation.Item5 + "\t" + +theEvaluation.Item6);
+                }
+            }
+
         }
     }
 }

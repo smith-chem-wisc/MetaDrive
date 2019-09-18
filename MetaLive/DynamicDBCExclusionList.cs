@@ -17,23 +17,17 @@ namespace MetaLive
             DBCExclusionList = new Queue<DynamicDBCValue>();
         }
 
-        public int UpdateExclusionList(double[] mzs, double range, DateTime dateTime)
+        public int MatchExclusionList(double[] mzs, double range)
         {
-            bool matched = false;
             for (int i = 0; i < DBCExclusionList.Count; i++)
             {
                 if (Match(mzs, DBCExclusionList.ElementAt(i).Mzs, range))
                 {
-                    matched = true;
                     DBCExclusionList.ElementAt(i).PlaceCount++;
                     return DBCExclusionList.ElementAt(i).PlaceCount;
                 }
             }
-            if (!matched)
-            {
-                DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 1, dateTime));
-            }
-            return 1;
+            return 0;
         }
 
         private bool Match(double[] mzs, double[] exclusionMzs, double range)

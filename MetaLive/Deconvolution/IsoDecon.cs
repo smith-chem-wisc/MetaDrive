@@ -99,14 +99,14 @@ namespace MassSpectrometry
         }
 
         //MsDeconv Envelop
-        private static double MsDeconvScore(IsoEnvelop isoEnvelop)
+        public static double MsDeconvScore(IsoEnvelop isoEnvelop)
         {
-            double score = 0;
-
             if (isoEnvelop == null)
             {
-                return score;
+                return 0;
             }
+
+            double score = 0;
 
             for (int i = 0; i < isoEnvelop.TheoIsoEnvelop.Length; i++)
             {
@@ -144,12 +144,12 @@ namespace MassSpectrometry
             var differenceBetweenTheorAndActual = candidateForMostIntensePeakMz.ToMass(chargeState) - mostIntenseMasses[massIndex];
 
             var theoryIsoEnvelopLength = 0;
-            double theoryIntensityCut = 0;
+
             for (int i = 0; i < allIntensities[massIndex].Length; i++)
             {
                 theoryIsoEnvelopLength++;
-                theoryIntensityCut += allIntensities[massIndex][i];
-                if (theoryIntensityCut >= 0.95 && i >= 2)
+
+                if (allIntensities[massIndex][i]/allIntensities[massIndex][0] <= 0.05 && i >= 2)
                 {
                     break;
                 }
@@ -363,7 +363,7 @@ namespace MassSpectrometry
 
             List<IsoEnvelop> isoEnvelops = new List<IsoEnvelop>();
 
-            foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => MsDeconvScore(b)))
+            foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => b.MsDeconvScore))
             {
                 if (seen.Overlaps(ok.ExperimentIsoEnvelop.Select(b => b.Mz)))
                 {

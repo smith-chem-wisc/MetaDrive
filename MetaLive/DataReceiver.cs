@@ -178,10 +178,10 @@ namespace MetaLive
                 Console.WriteLine("Start Thread for exclusion list!");
             }
 
-            Thread childThreadPlaceScan = new Thread(PlaceScan);
-            childThreadPlaceScan.IsBackground = true;
-            childThreadPlaceScan.Start();
-            Console.WriteLine("Start Thread for Place Scan!");
+            //Thread childThreadPlaceScan = new Thread(PlaceScan);
+            //childThreadPlaceScan.IsBackground = true;
+            //childThreadPlaceScan.Start();
+            //Console.WriteLine("Start Thread for Place Scan!");
 
             if (Parameters.GeneralSetting.MethodType == MethodTypes.GlycoFeature)
             {
@@ -433,10 +433,8 @@ namespace MetaLive
             try
             {   
                 //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                if (scan.HasCentroidInformation)
                 {
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}. Deconvolute.", IsBoxCarScan(scan));
 
                     DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
@@ -450,54 +448,6 @@ namespace MetaLive
             catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
-                Console.WriteLine(e.ToString() + " " + e.Source);
-            }
-        }
-
-
-
-        #endregion
-
-        #region StaticBox WorkFlow
-        //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans.
-        private void AddScanIntoQueue_StaticBox(IMsScan scan)
-        {
-            try
-            {
-                //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                {
-                    bool isBoxCarScan = IsBoxCarScan(scan);
-
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("In StaticBox method, MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
-
-                    if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
-                    {
-                        DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
-                    }
-
-                    if (isBoxCarScan)
-                    {
-                        BoxCarScanNum--;
-                    }
-
-                    if (BoxCarScanNum == 0)
-                    {
-                        lock (lockerScan)
-                        {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
-                        }
-                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
-                    }
-
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("AddScanIntoQueue_StaticBoxMS2FromFullScan Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
@@ -601,6 +551,54 @@ namespace MetaLive
             DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
         }
 
+
+        #endregion
+
+        #region StaticBox WorkFlow
+
+        //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans.
+        private void AddScanIntoQueue_StaticBox(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    bool isBoxCarScan = IsBoxCarScan(scan);
+
+                    string scanNumber;
+                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("In StaticBox method, MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
+
+                    if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
+                    {
+                        DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
+                    }
+
+                    if (isBoxCarScan)
+                    {
+                        BoxCarScanNum--;
+                    }
+
+                    if (BoxCarScanNum == 0)
+                    {
+                        lock (lockerScan)
+                        {
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                        }
+                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("AddScanIntoQueue_StaticBoxMS2FromFullScan Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
+            }
+        }
+
         #endregion
 
         #region DynamicBox WorkFlow
@@ -653,77 +651,35 @@ namespace MetaLive
             try
             {
                 //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                if (scan.HasCentroidInformation)
                 {
-                    bool isBoxCarScan = IsBoxCarScan(scan);
-                    Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
+                    //bool isBoxCarScan = IsBoxCarScan(scan);
+                    //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
-                    if (!isBoxCarScan)
+                    //lock (lockerScan)
                     {
-                        if (Parameters.MS2ScanSetting.DoMS2) //Topdown
-                        {
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            }
-
-                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
-
-                            if (chargeEnvelops.Count > 0)
-                            {
-                                lock (lockerScan)
-                                {
-                                    Console.WriteLine("chargeEnvelops.Count: {0}, Add BoxCar Scan dynamic boxes {1}", chargeEnvelops.Count, chargeEnvelops.SelectMany(p => p.mzs_box).ToList().Count());
-
-                                    if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
-                                    {
-                                        //Add BoxCar Scan
-                                        var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                        newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
-                                        UserDefinedScans.Enqueue(newDefinedScan);
-                                    }
-
-                                    //Add BoxCar-MS2 Scan
-                                    foreach (var ce in chargeEnvelops)
-                                    {
-                                        var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                                        newDefinedMS2Scan.dynamicBox = ce.mzs_box;
-                                        UserDefinedScans.Enqueue(newDefinedMS2Scan);
-
-                                        ////Here is just to test dynamic boxcar is better for MS2 scan.
-                                        //var anotherNewDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                                        //anotherNewDefinedMS2Scan.Mz = ce.FirstMz;
-                                        //UserDefinedScans.Enqueue(anotherNewDefinedMS2Scan);
-                                    }
-
-                                }
-                            }
-
-
-                        }
-                        else //Intact
-                        {
-                            //TO THINK: The time with DeconvoluateDynamicBoxRange need to be considered.
-                            var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
-                            lock (lockerScan)
-                            {
-
-                                if (chargeEnvelops.Count > 0)
-                                {
-                                    var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                    newDefinedScan.dynamicBox = chargeEnvelops.Where(p => p.MatchedIntensityRatio > 0.1).SelectMany(p => p.mzs_box).ToList();
-                                    UserDefinedScans.Enqueue(newDefinedScan);
-                                }
-                            }
-
-                            lock (lockerScan)
-                            {
-                                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            }
-
-                        }
+                        //UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        FullScan.PlaceFullScan(m_scans, Parameters);
                     }
 
+                    var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
+
+                    if (chargeEnvelops.Count > 0)
+                    {
+                        //lock (lockerScan)
+                        {
+                            Console.WriteLine("chargeEnvelops.Count: {0}", chargeEnvelops.Count);
+
+                            if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
+                            {
+                                //Add BoxCar Scan
+                                var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
+                                newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
+                                //UserDefinedScans.Enqueue(newDefinedScan);
+                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, newDefinedScan.dynamicBox);
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -739,30 +695,44 @@ namespace MetaLive
 
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
-            //double max = spectrum.YArray.Max();
-            //int indexMax = spectrum.YArray.ToList().IndexOf(max);
-            //var dynamicRange = ChargeDecon.FindChargesForPeak(spectrum, indexMax, DeconvolutionParameter);
-            //return dynamicRange.Select(p => p.Value.Mz).ToList();
-
-            var chargeEnvelops = ChargeDecon.QuickFindChargesForScan(spectrum, Parameters.DeconvolutionParameter);
-            List<ChargeEnvelop> FilteredChargeEnvelops = new List<ChargeEnvelop>();
+            var chargeEnvelops = ChargeDecon.QuickChargeDeconForScan(spectrum, Parameters.DeconvolutionParameter);
+            List<ChargeEnvelop> FilteredChargeEnvelops = chargeEnvelops.Take(1).ToList(); //How to do dynamic boxcar block.
 
             int placeScanCount = 0;
 
             foreach (var ce in chargeEnvelops)
             {
-                if (placeScanCount >= 4)
+                if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
                 {
                     break;
                 }
 
                 var mzs = ce.distributions.Select(p => p.peak.Mz).OrderBy(p => p).ToArray();
 
-                int matchedCount = DynamicDBCExclusionList.UpdateExclusionList(mzs, 0.7, DateTime.Now);
+                int matchedCount = DynamicDBCExclusionList.MatchExclusionList(mzs, 0.1);
 
-                if (matchedCount <= 3)
+                if (matchedCount == 0)
                 {
-                    FilteredChargeEnvelops.Add(ce);
+                    lock (lockerExclude)
+                    {
+                        DynamicDBCExclusionList.DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 0, DateTime.Now));
+                    }
+                }
+                else if (matchedCount >= 0 && matchedCount < 3)
+                {
+                    //lock (lockerScan)
+                    {
+                        var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                        newDefinedMS2Scan.dynamicBox = ce.mzs_box;
+                        //UserDefinedScans.Enqueue(newDefinedMS2Scan);
+                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, newDefinedMS2Scan.dynamicBox);
+
+                        ////Here is just to test dynamic boxcar is better for MS2 scan.
+                        //var anotherNewDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                        //anotherNewDefinedMS2Scan.Mz = ce.FirstMz;
+                        //UserDefinedScans.Enqueue(anotherNewDefinedMS2Scan);
+                    }
+
                     placeScanCount++;
                 }
             }
