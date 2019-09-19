@@ -246,7 +246,8 @@ namespace UnitTest
                 //Stopwatch stopwatch2 = new Stopwatch();
                 //stopwatch2.Start();
                 var stopwatch2 = Stopwatch.StartNew();
-                var x2 = ChargeDecon.QuickChargeDeconForScan(spectrum, deconvolutionParameter);
+                var isoEnvelops = new List<IsoEnvelop>();
+                var x2 = ChargeDecon.QuickChargeDeconForScan(spectrum, deconvolutionParameter, out isoEnvelops);
                 stopwatch2.Stop();
 
                 watches[i] = new Tuple<int, double, long, long, long, long>(scans[i].OneBasedScanNumber, scans[i].RetentionTime, stopwatch0.ElapsedMilliseconds, stopwatch_iso.ElapsedMilliseconds, stopwatch1.ElapsedMilliseconds, stopwatch2.ElapsedMilliseconds);

@@ -108,7 +108,7 @@ namespace MetaLive
 
             string dynamicTargets;
             string dynamicMaxIts;
-            var dynamicBoxString = BoxCarScan.BuildDynamicBoxInclusionString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
+            var dynamicBoxString = BuildDynamicBoxInclusionString(parameters, dynamicBox, out dynamicTargets, out dynamicMaxIts);
             scan.Values["MsxInjectRanges"] = dynamicBoxString;
             scan.Values["MsxInjectTargets"] = dynamicTargets;
             scan.Values["MsxInjectMaxITs"] = dynamicMaxIts;
@@ -118,6 +118,69 @@ namespace MetaLive
 
             Console.WriteLine("{0:HH:mm:ss,fff} placing data dependent ms2 scan {1}", DateTime.Now, dynamicBoxString);
             m_scans.SetCustomScan(scan);
+        }
+
+        public static string BuildDynamicBoxInclusionString(Parameters parameters, List<double> dynamicBoxBeforeOrder, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
+        {
+            //The dynamicBox list should be ordered?
+            var dynamicBox = dynamicBoxBeforeOrder.Where(p => p <= parameters.MS2ScanSetting.MS2MzRangeHighBound && p >= parameters.MS2ScanSetting.MS2MzRangeLowBound).ToList();
+
+            string dynamicBoxRanges = "[";
+
+            dynamicBoxRanges += "(";
+
+            var firstMass = (dynamicBox[0] - parameters.MS1IonSelecting.IsolationWindow < parameters.MS2ScanSetting.MS2MzRangeLowBound) ?
+                parameters.MS2ScanSetting.MS2MzRangeLowBound : dynamicBox[0] - parameters.MS1IonSelecting.IsolationWindow;
+            dynamicBoxRanges += firstMass.ToString("0.000");
+            dynamicBoxRanges += ",";
+            dynamicBoxRanges += (dynamicBox[0] + parameters.MS1IonSelecting.IsolationWindow).ToString("0.000");
+            dynamicBoxRanges += "),";
+
+            for (int i = 1; i < dynamicBox.Count - 1; i++)
+            {
+                dynamicBoxRanges += "(";
+                dynamicBoxRanges += (dynamicBox[i] - parameters.MS1IonSelecting.IsolationWindow).ToString("0.000");
+                dynamicBoxRanges += ",";
+                dynamicBoxRanges += (dynamicBox[i] + parameters.MS1IonSelecting.IsolationWindow).ToString("0.000");
+                dynamicBoxRanges += "),";
+            }
+
+            dynamicBoxRanges += "(";
+            dynamicBoxRanges += (dynamicBox.Last() - parameters.MS1IonSelecting.IsolationWindow).ToString("0.000");
+            dynamicBoxRanges += ",";
+
+            var lastMass = (dynamicBox.Last() + parameters.MS1IonSelecting.IsolationWindow > parameters.MS2ScanSetting.MS2MzRangeHighBound) ?
+                parameters.MS2ScanSetting.MS2MzRangeHighBound : dynamicBox.Last() + parameters.MS1IonSelecting.IsolationWindow;
+            dynamicBoxRanges += lastMass.ToString("0.000");
+            dynamicBoxRanges += ")";
+
+            dynamicBoxRanges += "]";
+
+
+            //Boxtargets and BoxMaxITs
+            dynamicBoxTargets = "[";
+            for (int i = 0; i < dynamicBox.Count; i++)
+            {
+                dynamicBoxTargets += parameters.MS2ScanSetting.MS2AgcTarget / dynamicBox.Count;
+                if (i != dynamicBox.Count - 1)
+                {
+                    dynamicBoxTargets += ",";
+                }
+            }
+            dynamicBoxTargets += "]";
+
+            dynamicBoxMaxITs = "[";
+            for (int i = 0; i < dynamicBox.Count; i++)
+            {
+                dynamicBoxMaxITs += parameters.MS2ScanSetting.MS2MaxInjectTimeInMillisecond / dynamicBox.Count;
+                if (i != dynamicBox.Count - 1)
+                {
+                    dynamicBoxMaxITs += ",";
+                }
+            }
+            dynamicBoxMaxITs += "]";
+
+            return dynamicBoxRanges;
         }
     }
 }

@@ -43,9 +43,13 @@ namespace UnitTest
             Assert.That(dynamicMaxITs == "[84,84,84]");
 
             var dynamicInclusion = BoxCarScan.BuildDynamicBoxInclusionString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
-            Assert.AreEqual(dynamicInclusion, "[(636.5,638.5),(665.4,667.4),(697.2,699.2)]");
+
+            Assert.AreEqual(dynamicInclusion, "[(697.660,698.660),(636.990,637.990),(665.930,666.930)]");
             Assert.That(dynamicTargets == "[166666,166666,166666]");
             Assert.That(dynamicMaxITs == "[84,84,84]");
+
+            var dynamicInclusionForMS2 = DataDependentScan.BuildDynamicBoxInclusionString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
+            Assert.AreEqual(dynamicInclusionForMS2, "[(374.300,375.700),(697.460,698.860),(636.790,638.190),(665.730,667.130),(1236.800,1238.200)]");
         }
 
         [Test]
