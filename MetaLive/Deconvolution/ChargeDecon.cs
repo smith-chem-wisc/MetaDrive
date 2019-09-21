@@ -54,7 +54,7 @@ namespace MassSpectrometry
 
             var monomass = mz * charge - charge * 1.0072;
 
-            for (int i = 1; i <= 60; i++)
+            for (int i = 2; i <= 60; i++)
             {
                 mz_z.Add(i, (monomass + i * 1.0072) / i);
 
@@ -158,7 +158,7 @@ namespace MassSpectrometry
                 }
             }
 
-            return lrs > 3;
+            return lrs >= 3;
         }
 
         private static Dictionary<int, MzPeak> GetMzsOfPeakAtCharge(MzSpectrumXY mzSpectrumXY, int index, int charge, DeconvolutionParameter deconvolutionParameter)

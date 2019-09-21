@@ -42,6 +42,7 @@ IntensityThreshold = 0
 
 [MS2ScanSetting]
 DoMS2 = true
+DoDbcMS2 = false
 MS2MaxInjectTimeInMillisecond = 25
 MS2Resolution = 15000
 NCE = 27

@@ -304,6 +304,7 @@ namespace MetaLive
     public class MS2ScanSetting
     {
         public bool DoMS2 { get; set; }
+        public bool DoDbcMS2 { get; set; }
         public int MS2MaxInjectTimeInMillisecond { get; set; }
         public int MS2Resolution { get; set; }
         public int NCE { get; set; }

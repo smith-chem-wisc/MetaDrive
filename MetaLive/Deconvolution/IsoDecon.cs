@@ -311,6 +311,7 @@ namespace MassSpectrometry
                 intensityInRange += mzSpectrumXY.YArray[i];
             }
 
+            //less peak and lower intensity means low ratio.
             double ratio = (isoEnvelop.TotalIntensity / intensityInRange) * ((double)isoEnvelop.ExperimentIsoEnvelop.Where(p => p.Intensity != 0).Count() / ((double)maxInd - (double)minInd + 1));
 
             return ratio;

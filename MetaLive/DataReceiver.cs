@@ -651,10 +651,11 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation)
                 {
-                    //bool isBoxCarScan = IsBoxCarScan(scan);
+                    bool isBoxCarScan = IsBoxCarScan(scan);
                     //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
                     //lock (lockerScan)
+                    if (!isBoxCarScan)
                     {
                         //UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                         FullScan.PlaceFullScan(m_scans, Parameters);
@@ -662,7 +663,7 @@ namespace MetaLive
 
                     var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
 
-                    if (chargeEnvelops.Count > 0)
+                    if (!isBoxCarScan && chargeEnvelops.Count > 0)
                     {
                         //lock (lockerScan)
                         {
@@ -674,7 +675,7 @@ namespace MetaLive
                                 //var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
                                 //newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
                                 //UserDefinedScans.Enqueue(newDefinedScan);
-                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.SelectMany(p => p.mzs_box).ToList());
+                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.SelectMany(p => p.distributions.Select(q => q.peak.Mz)).ToList());
                             }
                         }
                     }
@@ -723,7 +724,18 @@ namespace MetaLive
                         //var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
                         //newDefinedMS2Scan.dynamicBox = ce.mzs_box;
                         //UserDefinedScans.Enqueue(newDefinedMS2Scan);
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+                        if (Parameters.MS2ScanSetting.DoDbcMS2)
+                        {
+                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+
+                        }
+                        else
+                        {
+                            Random rnd = new Random();
+                            int r = rnd.Next(ce.mzs_box.Count);
+                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box[r]);
+                        }
+
                         placeScanCount++;
 
                         var dataTime = DateTime.Now;
