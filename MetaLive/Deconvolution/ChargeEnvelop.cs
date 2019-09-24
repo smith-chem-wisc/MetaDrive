@@ -61,6 +61,14 @@ namespace MassSpectrometry
             }
         }
 
+        public List<double> mzs
+        {
+            get
+            {
+                return distributions.Select(p => p.peak.Mz).ToList();
+            }
+        }
+
         //The number for ms2 box_car should be related with intensity
         public int Count_box
         {

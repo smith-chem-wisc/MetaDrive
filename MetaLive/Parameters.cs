@@ -10,7 +10,8 @@ namespace MetaLive
         StaticBoxCar = 1,
         DynamicBoxCar = 2,
         GlycoFeature = 3,
-        Partner = 4
+        Partner = 4,
+        UserDefined = 5
     }
 
     public class Parameters

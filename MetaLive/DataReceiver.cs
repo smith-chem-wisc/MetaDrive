@@ -94,6 +94,10 @@ namespace MetaLive
                     AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
                     Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
                     break;
+                case MethodTypes.UserDefined:
+                    AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
+                    Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
+                    break;
                 default:
                     break;
             }
@@ -1177,6 +1181,51 @@ namespace MetaLive
                 }
                 j++;
             }
+        }
+
+        #endregion
+
+        #region UserDefinedWorkFlow
+
+        private void AddScanIntoQueue_UserDefined(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation)
+                {
+                    var chargeEnvelops = UserDefined(scan);
+
+                    FullScan.PlaceFullScan(m_scans, Parameters);                  
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("AddScanIntoQueue_UserDefined Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
+            }
+        }
+
+        private List<ChargeEnvelop> UserDefined(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} UserDefined Start", DateTime.Now);
+
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+
+            var chargeEnvelops = ChargeDecon.FindChargesForScan(spectrum, Parameters.DeconvolutionParameter, 1);
+
+            var ce = chargeEnvelops.First();
+
+            foreach (var mz in ce.mzs)
+            {
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            }
+
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs);
+
+            return chargeEnvelops;
         }
 
         #endregion

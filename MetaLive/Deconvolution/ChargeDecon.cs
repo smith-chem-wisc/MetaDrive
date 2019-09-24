@@ -249,13 +249,18 @@ namespace MassSpectrometry
 
 
         //Find Charge for intensity ordered peak, try get isoEnvelop for each charge, filtered by seen peak in each Envelop 
-        public static List<ChargeEnvelop> FindChargesForScan(MzSpectrumXY mzSpectrumXY, DeconvolutionParameter deconvolutionParameter)
+        public static List<ChargeEnvelop> FindChargesForScan(MzSpectrumXY mzSpectrumXY, DeconvolutionParameter deconvolutionParameter, int limit = 0)
         {
             List<ChargeEnvelop> chargeEnvelops = new List<ChargeEnvelop>();
             HashSet<int> seenPeakIndex = new HashSet<int>();
 
             foreach (var peakIndex in mzSpectrumXY.ExtractIndicesByY())
             {
+                if (limit != 0 && chargeEnvelops.Count==limit)
+                {
+                    break;
+                }
+
                 if (seenPeakIndex.Contains(peakIndex))
                 {
                     continue;
