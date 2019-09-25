@@ -91,12 +91,12 @@ namespace MetaLive
                     Console.WriteLine("AddScanIntoQueueAction = Glyco.");
                     break;
                 case MethodTypes.Partner:
-                    AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
+                    AddScanIntoQueueAction = AddScanIntoQueue_Partner;
                     Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
                     break;
                 case MethodTypes.UserDefined:
-                    AddScanIntoQueueAction = AddScanIntoQueue_NeuCode;
-                    Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
+                    AddScanIntoQueueAction = AddScanIntoQueue_UserDefined;
+                    Console.WriteLine("AddScanIntoQueueAction = UserDefined.");
                     break;
                 default:
                     break;
@@ -973,22 +973,22 @@ namespace MetaLive
 
         #region NeuCode WorkFlow
 
-        private void AddScanIntoQueue_NeuCode(IMsScan scan)
+        private void AddScanIntoQueue_Partner(IMsScan scan)
         {
             try
             {
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation && IsMS1Scan(scan))
                 {
-                    Console.WriteLine("MS1 Scan arrived NeuCode.");
+                    Console.WriteLine("MS1 Scan arrived Partner.");
 
-                    DeconvoluteFindNeuCodeFeatures(scan);
+                    DeconvoluteFindPartners(scan);
 
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("AddScanIntoQueue_NeuCode Exception!");
+                Console.WriteLine("AddScanIntoQueue_Partner Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
         }
@@ -1181,6 +1181,41 @@ namespace MetaLive
                 }
                 j++;
             }
+        }
+
+        private void DeconvoluteFindPartners(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Partner Start", DateTime.Now);
+
+            var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+
+            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => p.IsLight && p.Charge >= 5 && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
+
+            var placeScanCount = 0;
+
+            foreach (var iso in isoEnvelops)
+            {
+                if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
+                {
+                    break;
+                }
+
+                if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                {
+                    var dataTime = DateTime.Now;
+                    lock (lockerExclude)
+                    {
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
+                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                    }
+
+                    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);
+                    placeScanCount++;
+                }
+            }
+
+            FullScan.PlaceFullScan(m_scans, Parameters);
+
         }
 
         #endregion

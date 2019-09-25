@@ -390,6 +390,11 @@ namespace MassSpectrometry
         //TO DO: need to be improved
         private static void FindLabelPair(List<IsoEnvelop> isoEnvelops, DeconvolutionParameter deconvolutionParameter)
         {
+            if (!deconvolutionParameter.ToGetPartner)
+            {
+                return;
+            }
+
             double[] monoMzs = isoEnvelops.Select(p => p.ExperimentIsoEnvelop.First().Mz).ToArray();
 
             foreach (var iso in isoEnvelops)
@@ -414,10 +419,9 @@ namespace MassSpectrometry
                         if (0.5 <= ratio && ratio <= 2)
                         {
                             iso.HasPartner = true;
+                            iso.IsLight = true;
                             iso.Partner = isoEnvelops.ElementAt(closestIsoIndex.Value);
-
                             isoEnvelops.ElementAt(closestIsoIndex.Value).HasPartner = true;
-                            isoEnvelops.ElementAt(closestIsoIndex.Value).Partner = iso;
                         }
                     }
                 }

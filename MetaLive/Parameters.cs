@@ -297,8 +297,6 @@ namespace MetaLive
         public double ExclusionTolerance { get; set; }
         public double IsolationWindow { get; set; }
         public int NormCharge { get; set; }  // TO DO: What does this number mean? Once tried with 9 and crash. 
-        public int MinCharge { get; set; }
-        public int MaxCharge { get; set; }
         public int IntensityThreshold { get; set; }
     }
 

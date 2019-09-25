@@ -44,6 +44,8 @@ namespace MassSpectrometry
         //For NeuCode Feature
         public bool HasPartner { get; set; } = false;
 
+        public bool IsLight { get; set; } = false;
+
         public IsoEnvelop Partner { get; set; }
 
     }
