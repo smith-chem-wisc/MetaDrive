@@ -48,11 +48,9 @@ namespace MassSpectrometry
         }
 
         //Dictinary<charge, mz>
-        private static Dictionary<int, double> GenerateMzs(double mz, int charge)
+        private static Dictionary<int, double> GenerateMzs(double monomass)
         {
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
-
-            var monomass = mz.ToMass(charge); 
 
             for (int i = 2; i <= 60; i++)
             {
@@ -165,7 +163,7 @@ namespace MassSpectrometry
         {
             var mz = mzSpectrumXY.XArray[index];
 
-            var mz_z = GenerateMzs(mz, charge);
+            var mz_z = GenerateMzs(mz.ToMass(charge));
 
             Dictionary<int, MzPeak> the_matched_mz_z = new Dictionary<int, MzPeak>();
 
