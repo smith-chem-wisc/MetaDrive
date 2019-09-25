@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MzLibUtil;
+using Chemistry;
 
 
 namespace MassSpectrometry
@@ -52,11 +52,11 @@ namespace MassSpectrometry
         {
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
 
-            var monomass = mz * charge - charge * 1.0072;
+            var monomass = mz.ToMass(charge); 
 
             for (int i = 2; i <= 60; i++)
             {
-                mz_z.Add(i, (monomass + i * 1.0072) / i);
+                mz_z.Add(i, monomass.ToMz(i));
 
             }
 
