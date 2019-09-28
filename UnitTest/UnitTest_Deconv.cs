@@ -11,7 +11,7 @@ using System.IO;
 using MetaLive;
 using IO.MzML;
 using MzLibUtil;
-
+using Chemistry;
 
 namespace UnitTest
 {
@@ -191,6 +191,24 @@ namespace UnitTest
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
             stopwatch4.Stop();
             Assert.That(test == "[(400.0,522.8),(524.8,542.2),(544.2,563.1),(565.1,585.6),(587.6,610.0),(612.0,636.5),(638.5,665.4),(667.4,697.1),(699.1,732.0),(734.0,770.5),(772.5,813.3),(815.3,861.1),(863.1,915.0),(917.0,976.0),(978.0,1045.7),(1047.7,1126.1),(1128.1,1200.0)]");
+        }
+
+        [Test]
+        public static void Test_Charge()
+        {
+            var monomass = 29023.596;
+
+            Dictionary<int, double> mz_z = new Dictionary<int, double>();
+
+            for (int i = 25; i <= 40; i++)
+            {
+                mz_z.Add(i, monomass.ToMz(i));
+
+            }
+
+            double mz = 854.64246;
+
+            var mass = mz.ToMass(34);
         }
 
         [Test]
