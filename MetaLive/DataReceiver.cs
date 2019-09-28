@@ -1243,11 +1243,11 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} UserDefined Start", DateTime.Now);
 
-            var monomass = 29023.596;
+            var monomass = 8564.59355;
 
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
 
-            for (int i = 25; i <= 40; i++)
+            for (int i = 6; i <= 14; i++)
             {
                 mz_z.Add(i, monomass.ToMz(i));
 
@@ -1265,8 +1265,8 @@ namespace MetaLive
                 Parameters.MS2ScanSetting.NCE_factors = "null";
             }
 
-            //int j = 27;
-            //while (j <= 39)
+            //int j = 6;
+            //while (j <= 14)
             //{
             //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
             //    Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
@@ -1274,13 +1274,13 @@ namespace MetaLive
             //    Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
             //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
             //    Parameters.MS2ScanSetting.NCE_factors = "null";
-            //    j += 2;
+            //    j += 1;
             //}
 
             //List<double> comb = new List<double>();
-            //comb.Add(mz_z[31]);
-            //comb.Add(mz_z[33]);
-            //comb.Add(mz_z[35]);
+            //comb.Add(mz_z[9]);
+            //comb.Add(mz_z[11]);
+            //comb.Add(mz_z[13]);
             //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
             //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
             //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
@@ -1289,20 +1289,9 @@ namespace MetaLive
             //Parameters.MS2ScanSetting.NCE_factors = "null";
 
             //comb.Clear();
-            //comb.Add(mz_z[29]);
-            //comb.Add(mz_z[33]);
-            //comb.Add(mz_z[37]);
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "null";
-
-            //comb.Clear();
-            //comb.Add(mz_z[27]);
-            //comb.Add(mz_z[33]);
-            //comb.Add(mz_z[39]);
+            //comb.Add(mz_z[7]);
+            //comb.Add(mz_z[10]);
+            //comb.Add(mz_z[13]);
             //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
             //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
             //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);

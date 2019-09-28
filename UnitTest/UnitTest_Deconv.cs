@@ -196,19 +196,25 @@ namespace UnitTest
         [Test]
         public static void Test_Charge()
         {
-            var monomass = 29023.596;
+            //double mz = 854.64246;
+            //var mass = mz.ToMass(34);
+            //var monomass = 29023.596;
+            //Dictionary<int, double> mz_z = new Dictionary<int, double>();
+            //for (int i = 25; i <= 40; i++)
+            //{
+            //    mz_z.Add(i, monomass.ToMz(i));
+            //}
 
+            double mz = 779.60669;
+            var mass = mz.ToMass(11);
+            var monomass = 8564.59355;
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
-
-            for (int i = 25; i <= 40; i++)
+            for (int i = 6; i <= 14; i++)
             {
                 mz_z.Add(i, monomass.ToMz(i));
-
             }
 
-            double mz = 854.64246;
 
-            var mass = mz.ToMass(34);
         }
 
         [Test]
