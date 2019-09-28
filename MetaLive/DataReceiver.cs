@@ -1229,9 +1229,7 @@ namespace MetaLive
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation)
                 {
-                    var chargeEnvelops = UserDefined(scan);
-
-                    FullScan.PlaceFullScan(m_scans, Parameters);                  
+                    PlaceUserDefined(scan);               
                 }
             }
             catch (Exception e)
@@ -1241,26 +1239,73 @@ namespace MetaLive
             }
         }
 
-        private List<ChargeEnvelop> UserDefined(IMsScan scan)
+        private void PlaceUserDefined(IMsScan scan)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} UserDefined Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            var monomass = 29006.5688;
 
-            var chargeEnvelops = ChargeDecon.FindChargesForScan(spectrum, Parameters.DeconvolutionParameter, 1);
+            Dictionary<int, double> mz_z = new Dictionary<int, double>();
 
-            var ce = chargeEnvelops.First();
-
-            foreach (var mz in ce.mzs)
+            for (int i = 25; i <= 40; i++)
             {
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                mz_z.Add(i, monomass.ToMz(i));
+
             }
 
-            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+            var mzs = mz_z.Values;
 
-            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs);
+            foreach (var mz in mzs)
+            {
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                Parameters.MS2ScanSetting.NCE_factors = "null";
+            }
 
-            return chargeEnvelops;
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            //List<double> comb = new List<double>();
+            //comb.Add(mz_z[31]);
+            //comb.Add(mz_z[33]);
+            //comb.Add(mz_z[35]);
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            //comb.Clear();
+            //comb.Add(mz_z[29]);
+            //comb.Add(mz_z[33]);
+            //comb.Add(mz_z[37]);
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            //comb.Clear();
+            //comb.Add(mz_z[27]);
+            //comb.Add(mz_z[33]);
+            //comb.Add(mz_z[37]);
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mzs.ToList());
+            //Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            FullScan.PlaceFullScan(m_scans, Parameters);
         }
 
         #endregion

@@ -65,7 +65,7 @@ namespace MassSpectrometry
         {
             get
             {
-                return distributions.Select(p => p.peak.Mz).ToList();
+                return distributions.Select(p => p.peak.Mz).OrderBy(p=>p).ToList();
             }
         }
 
