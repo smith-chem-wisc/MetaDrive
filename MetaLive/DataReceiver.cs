@@ -1243,11 +1243,11 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} UserDefined Start", DateTime.Now);
 
-            var monomass = 8564.59355;
+            var monomass = 12358.2722;
 
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
 
-            for (int i = 6; i <= 14; i++)
+            for (int i = 8; i <= 20; i++)
             {
                 mz_z.Add(i, monomass.ToMz(i));
 
@@ -1255,49 +1255,108 @@ namespace MetaLive
 
             var mzs = mz_z.Values;
 
-            foreach (var mz in mzs)
-            {
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
-                Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
-                Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
-                Parameters.MS2ScanSetting.NCE_factors = "null";
-            }
-
-            //int j = 6;
-            //while (j <= 14)
+            //foreach (var mz in mzs)
             //{
-            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+            //    Parameters.MS2ScanSetting.NCE = 10;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 15;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 20;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 25;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 30;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 35;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 40;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 45;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE = 50;
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //}
+            //Parameters.MS2ScanSetting.NCE = 25;
+
+            //foreach (var mz in mzs)
+            //{
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+            //    Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
             //    Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
-            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
             //    Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
-            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+            //    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
             //    Parameters.MS2ScanSetting.NCE_factors = "null";
-            //    j += 1;
             //}
 
-            //List<double> comb = new List<double>();
-            //comb.Add(mz_z[9]);
-            //comb.Add(mz_z[11]);
-            //comb.Add(mz_z[13]);
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "null";
+            int j = 9;
+            while (j <= 19)
+            {
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+                Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+                Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+                Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
+                Parameters.MS2ScanSetting.NCE_factors = "null";
+                j += 2;
+            }
 
-            //comb.Clear();
-            //comb.Add(mz_z[7]);
-            //comb.Add(mz_z[10]);
-            //comb.Add(mz_z[13]);
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
-            //DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
-            //Parameters.MS2ScanSetting.NCE_factors = "null";
+            List<double> comb = new List<double>();
+            comb.Add(mz_z[14]);
+            comb.Add(mz_z[15]);
+            comb.Add(mz_z[16]);
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            comb.Clear();
+            comb.Add(mz_z[13]);
+            comb.Add(mz_z[15]);
+            comb.Add(mz_z[17]);
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            comb.Clear();
+            comb.Add(mz_z[11]);
+            comb.Add(mz_z[15]);
+            comb.Add(mz_z[19]);
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            comb.Clear();
+            comb.Add(mz_z[11]);
+            comb.Add(mz_z[13]);
+            comb.Add(mz_z[15]);
+            comb.Add(mz_z[17]);
+            comb.Add(mz_z[19]);
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "null";
 
             FullScan.PlaceFullScan(m_scans, Parameters);
         }
