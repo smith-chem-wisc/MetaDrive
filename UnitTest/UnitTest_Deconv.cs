@@ -214,9 +214,18 @@ namespace UnitTest
             //    mz_z.Add(i, monomass.ToMz(i));
             //}
 
-            double mz = 824.89209;
-            var mass = mz.ToMass(15);
-            var monomass = 12358.2722;
+            //double mz = 824.89209;
+            //var mass = mz.ToMass(15);
+            //var monomass = 12358.2722;
+            //Dictionary<int, double> mz_z = new Dictionary<int, double>();
+            //for (int i = 8; i <= 20; i++)
+            //{
+            //    mz_z.Add(i, monomass.ToMz(i));
+            //}
+
+            double mz = 1848.41797;
+            var mass = mz.ToMass(13);
+            var monomass = 24016.33902;
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
             for (int i = 8; i <= 20; i++)
             {
