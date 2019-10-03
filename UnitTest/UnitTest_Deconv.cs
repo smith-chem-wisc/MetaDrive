@@ -232,11 +232,11 @@ namespace UnitTest
             //    mz_z.Add(i, monomass.ToMz(i));
             //}
 
-            double mz = 808.90894;
+            double mz = 808.19220;
             var mass = mz.ToMass(21);
-            var monomass = 16965.93493;
+            var monomass = 16950.88339;
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
-            for (int i = 17; i <= 25; i++)
+            for (int i = 15; i <= 27; i++)
             {
                 mz_z.Add(i, monomass.ToMz(i));
             }

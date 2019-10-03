@@ -1243,11 +1243,11 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} UserDefined Start", DateTime.Now);
 
-            var monomass = 16965.93493;
+            var monomass = 16950.88339;
 
             Dictionary<int, double> mz_z = new Dictionary<int, double>();
 
-            for (int i = 17; i <= 25; i++)
+            for (int i = 15; i <= 27; i++)
             {
                 mz_z.Add(i, monomass.ToMz(i));
 
@@ -1290,8 +1290,8 @@ namespace MetaLive
             //    Parameters.MS2ScanSetting.NCE_factors = "null";
             //}
 
-            int j = 17;
-            while (j <= 25)
+            int j = 15;
+            while (j <= 27)
             {
                 DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz_z[j]);
                 Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
@@ -1321,6 +1321,19 @@ namespace MetaLive
             comb.Add(mz_z[19]);
             comb.Add(mz_z[21]);
             comb.Add(mz_z[23]);
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.8, 1, 1.2]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "[0.6, 1, 1.4]";
+            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
+            Parameters.MS2ScanSetting.NCE_factors = "null";
+
+            comb.Clear();
+            comb.Add(mz_z[17]);
+            comb.Add(mz_z[21]);
+            comb.Add(mz_z[25]);
             DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
             Parameters.MS2ScanSetting.NCE_factors = "[0.9, 1, 1.1]";
             DataDependentScan.PlaceMS2Scan(m_scans, Parameters, comb);
