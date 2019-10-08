@@ -679,7 +679,7 @@ namespace MetaLive
                                 //var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
                                 //newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
                                 //UserDefinedScans.Enqueue(newDefinedScan);
-                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.SelectMany(p => p.distributions.Select(q => q.peak.Mz)).ToList());
+                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.SelectMany(p => p.distributions.Select(q => q.mz)).ToList());
                             }
                         }
                     }
@@ -698,7 +698,7 @@ namespace MetaLive
 
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             List<IsoEnvelop> isoEnvelops;
-            var chargeEnvelops = ChargeDecon.QuickChargeDeconForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops);
+            var chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops);
             List<ChargeEnvelop> FilteredChargeEnvelops = chargeEnvelops.Take(1).ToList(); //How to do dynamic boxcar block.
 
             int placeScanCount = 0;
@@ -710,7 +710,7 @@ namespace MetaLive
                     break;
                 }
 
-                var mzs = ce.distributions.Select(p => p.peak.Mz).OrderBy(p => p).ToArray();
+                var mzs = ce.distributions.Select(p => p.mz).OrderBy(p => p).ToArray();
 
                 int matchedCount = DynamicDBCExclusionList.MatchExclusionList(mzs, 0.1);
 

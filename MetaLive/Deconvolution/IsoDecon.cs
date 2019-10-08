@@ -323,14 +323,14 @@ namespace MassSpectrometry
             return 0;
         }
 
-        public static IEnumerable<IsoEnvelop> MsDeconv_Deconvolute(MzSpectrumXY mzSpectrumXY, MzRange theRange, DeconvolutionParameter deconvolutionParameter)
+        public static List<IsoEnvelop> MsDeconv_Deconvolute(MzSpectrumXY mzSpectrumXY, MzRange theRange, DeconvolutionParameter deconvolutionParameter)
         {
+            var isolatedMassesAndCharges = new List<IsoEnvelop>();
+
             if (mzSpectrumXY.Size == 0)
             {
-                yield break;
+                return isolatedMassesAndCharges;
             }
-
-            var isolatedMassesAndCharges = new List<IsoEnvelop>();
 
             //HashSet<double> seenPeaks = new HashSet<double>();
 
@@ -380,10 +380,8 @@ namespace MassSpectrometry
 
             var orderedIsoEnvelops = isoEnvelops.OrderBy(p => p.ExperimentIsoEnvelop.First().Mz).ToList();
             FindLabelPair(orderedIsoEnvelops, deconvolutionParameter);
-            foreach (var iso in orderedIsoEnvelops)
-            {
-                yield return iso;
-            }
+
+            return orderedIsoEnvelops;
         }
 
         //isoEnvelops should be already ordered by mono mass
