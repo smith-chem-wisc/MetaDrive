@@ -236,7 +236,7 @@ namespace MassSpectrometry
         {
             int secondConsecutiveLength = 0;
             int consecutiveLength = GetConsecutiveLength(experiment, out secondConsecutiveLength);
-            if (consecutiveLength < 3 || consecutiveLength + secondConsecutiveLength < experiment.Length * 2 / 3)
+            if (consecutiveLength < 3 || consecutiveLength + secondConsecutiveLength < experiment.Length * 1 / 2)
             {
                 return false;
             }
@@ -249,6 +249,7 @@ namespace MassSpectrometry
             IsoEnvelop bestIsotopeEnvelopeForThisPeak = null;
 
             var candidateForMostIntensePeakMz = mzSpectrumXY.XArray[candidateForMostIntensePeak];
+
 
             //Find possible chargeStates.
             List<int> allPossibleChargeState = new List<int>();
