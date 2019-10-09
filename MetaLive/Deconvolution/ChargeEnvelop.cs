@@ -36,7 +36,23 @@ namespace MassSpectrometry
             }
         }
 
+        public List<(int charge, double mz, double intensity, IsoEnvelop isoEnvelop)> distributions_withIso
+        {
+            get
+            {
+                return distributions.Where(p => p.isoEnvelop != null).ToList();
+            }
+        }
+
         public List<int> TheoPeakIndex { get; set; }
+
+        public double TotalIsoIntensity
+        {
+            get
+            {
+                return distributions_withIso.Sum(p => p.isoEnvelop.TotalIntensity);
+            }
+        }
 
         public double ChargeDeconScore
         {
@@ -65,21 +81,11 @@ namespace MassSpectrometry
             }
         }
 
-        //The number for ms2 box_car should be related with intensity
-        public int Count_box
-        {
-            get
-            {
-                int count = distributions.Count() * 2 / 3;
-                return count > 6 ? 6 : count;
-            }
-        }
-
         public List<double> mzs_box
         {
             get
             {
-                return distributions.OrderByDescending(p => p.intensity).Take(Count_box).OrderBy(p => p.intensity).Select(p => p.mz).ToList();
+                return distributions_withIso.OrderByDescending(p => p.isoEnvelop.TotalIntensity).Take(distributions_withIso.Count*2/3).Where((x, i) => i % 2 == 0).OrderBy(p => p.intensity).Select(p => p.mz).ToList();
             }
         }
     }

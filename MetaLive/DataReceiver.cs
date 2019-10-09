@@ -661,7 +661,6 @@ namespace MetaLive
                     //lock (lockerScan)
                     if (!isBoxCarScan)
                     {
-                        //UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
                         FullScan.PlaceFullScan(m_scans, Parameters);
                     }
 
@@ -675,11 +674,14 @@ namespace MetaLive
 
                             if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
                             {
-                                //Add BoxCar Scan
-                                //var newDefinedScan = new UserDefinedScan(UserDefinedScanType.BoxCarScan);
-                                //newDefinedScan.dynamicBox = chargeEnvelops.SelectMany(p => p.mzs_box).ToList();
-                                //UserDefinedScans.Enqueue(newDefinedScan);
-                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.SelectMany(p => p.distributions.Select(q => q.mz)).ToList());
+                                if (chargeEnvelops.Count== 1)
+                                {
+                                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
+                                }
+                                else if (chargeEnvelops.Count > 1 && chargeEnvelops[0].TotalIsoIntensity/chargeEnvelops[1].TotalIsoIntensity > 4)
+                                {
+                                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
+                                }
                             }
                         }
                     }
@@ -698,8 +700,7 @@ namespace MetaLive
 
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             List<IsoEnvelop> isoEnvelops;
-            var chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops);
-            List<ChargeEnvelop> FilteredChargeEnvelops = chargeEnvelops.Take(1).ToList(); //How to do dynamic boxcar block.
+            var chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops).Where(p=>p.distributions_withIso.Count >= 3);
 
             int placeScanCount = 0;
 
@@ -716,46 +717,14 @@ namespace MetaLive
 
                 if (matchedCount == 0)
                 {
+                    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+
+                    placeScanCount++;
+
                     lock (lockerExclude)
                     {
                         DynamicDBCExclusionList.DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 0, DateTime.Now));
                     }
-                }
-                else if (matchedCount >= 0 && matchedCount < 3)
-                {
-                    //lock (lockerScan)
-                    {
-                        //var newDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                        //newDefinedMS2Scan.dynamicBox = ce.mzs_box;
-                        //UserDefinedScans.Enqueue(newDefinedMS2Scan);
-                        if (Parameters.MS2ScanSetting.DoDbcMS2)
-                        {
-                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
-
-                        }
-                        else
-                        {
-                            Random rnd = new Random();
-                            int r = rnd.Next(ce.mzs_box.Count);
-                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box[r]);
-                        }
-
-                        placeScanCount++;
-
-                        var dataTime = DateTime.Now;
-                        lock (lockerExclude)
-                        {
-                            foreach (var mz in mzs)
-                            {
-                                DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(mz, 0, dataTime));
-                            }
-                        }
-                        ////Here is just to test dynamic boxcar is better for MS2 scan.
-                        //var anotherNewDefinedMS2Scan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                        //anotherNewDefinedMS2Scan.Mz = ce.FirstMz;
-                        //UserDefinedScans.Enqueue(anotherNewDefinedMS2Scan);
-                    }
-
                 }
             }
 
@@ -783,7 +752,7 @@ namespace MetaLive
             }
 
 
-            return FilteredChargeEnvelops;
+            return chargeEnvelops.ToList();
         }
 
         #endregion

@@ -410,25 +410,11 @@ namespace MassSpectrometry
 
             var isos = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, deconvolutionParameter).Where(p => p.Charge >= 5 && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.2).OrderByDescending(p => p.MsDeconvScore);
 
-            //Dictionary<double, IsoEnvelop> mz2iso = new Dictionary<double, IsoEnvelop>();
-            //foreach (var s in isos)
-            //{
-            //    foreach (var mzPeak in s.ExperimentIsoEnvelop)
-            //    {
-            //        mz2iso.Add(mzPeak.Mz, s);
-            //    }
-            //}
 
-            //Dictionary<double, double> seenMz = new Dictionary<double, double>();
             HashSet<double> seenMz = new HashSet<double>();
 
             foreach (var iso in isos)
             {
-                //if (iso.Charge < 5 || PeakSeenInRange(iso.ExperimentIsoEnvelop.First().Mz, seenMz))
-                //{
-                //    continue;
-                //}
-
                 if (iso.Charge < 5 || seenMz.Overlaps(iso.ExperimentIsoEnvelop.Select(p => p.Mz)))
                 {
                     continue;
@@ -444,21 +430,13 @@ namespace MassSpectrometry
 
                     foreach (var mzz in mz_zs)
                     {
-                        //var s = mz2iso.ContainsKey(mzz.Value.Mz)? mz2iso[mzz.Value.Mz] : null;
                         var s = isos.Where(p => p.Charge == mzz.charge).Where(p => p.TheoPeakIndex.Contains(mzz.index)).FirstOrDefault();
 
                         chargeEnve.distributions.Add((mzz.charge, mzz.mz, mzz.intensity, s));
 
-                        //if (seenMz.ContainsKey(mzz.Value.Mz))
-                        //{
-                        //    continue;
-                        //}
-                        //var x = mzz.Value.Mz * mzz.Key;
-                        //var range = (5.581E-4 * x + 1.64 * Math.Log(x) - 2.608E-9 * Math.Pow(x, 2) - 6.58) / mzz.Key / 2;
-                        //seenMz.Add(mzz.Value.Mz, range);
-
                         seenMz.Add(mzz.mz);
                     }
+
                     chargeEnvelops.Add(chargeEnve);
                 }
                 else
