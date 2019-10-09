@@ -678,7 +678,7 @@ namespace MetaLive
                                 {
                                     BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
                                 }
-                                else if (chargeEnvelops.Count > 1 && chargeEnvelops[0].TotalIsoIntensity/chargeEnvelops[1].TotalIsoIntensity > 4)
+                                else if (chargeEnvelops.Count > 1 && chargeEnvelops[0].TotalIsoIntensity/chargeEnvelops[1].TotalIsoIntensity > 5)
                                 {
                                     BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
                                 }

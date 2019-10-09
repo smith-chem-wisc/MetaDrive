@@ -85,7 +85,8 @@ namespace MassSpectrometry
         {
             get
             {
-                return distributions_withIso.OrderByDescending(p => p.isoEnvelop.TotalIntensity).Take(distributions_withIso.Count*2/3).Where((x, i) => i % 2 == 0).OrderBy(p => p.intensity).Select(p => p.mz).ToList();
+                int edge = distributions_withIso.Count >= 8 ? 2 : 1;
+                return distributions_withIso.OrderByDescending(p => p.isoEnvelop.TotalIntensity).Take(distributions_withIso.Count*2/3 + edge).OrderBy(p=>p.charge).Where((x, i) => i % 2 == 0).Select(p => p.mz).ToList();
             }
         }
     }
