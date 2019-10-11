@@ -675,7 +675,7 @@ namespace MetaLive
 
                             if (Parameters.BoxCarScanSetting.DoDbcForMS1)
                             {
-                                 var boxes = GenerateBoxes(isoEnvelops);
+                                 var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
 
                                  BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }
@@ -725,18 +725,20 @@ namespace MetaLive
                     {
                         var mz = ce.distributions_withIso.OrderByDescending(p => p.intensity).First().mz;
                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
-
                     }
                     
-
                     placeScanCount++;
 
                     lock (lockerExclude)
                     {
                         DynamicDBCExclusionList.DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 0, DateTime.Now));
+                        foreach (var x in ce.distributions)
+                        {
+                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(x.mz, x.charge, DateTime.Now));
+                        }
+                        
                     }
                 }
-
             }
 
 
@@ -761,23 +763,6 @@ namespace MetaLive
                 }
 
             }
-        }
-
-        private Tuple<double, double, double>[] GenerateBoxes(List<IsoEnvelop> isoEnvelops)
-        {
-            var thred =  isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio/20;
-            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p=>p).ToList();
-
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count]; 
-
-            for (int i = 1; i < mzs.Count; i++)
-            {
-                ranges[i - 1] = new Tuple<double, double, double>(mzs[i-1], mzs[i], mzs[i] - mzs[i - 1]);            
-            }
-            ranges[mzs.Count-1] = new Tuple<double, double, double>(mzs.Last(), (double)Parameters.FullScanSetting.MzRangeHighBound, (double)Parameters.FullScanSetting.MzRangeHighBound - mzs.Last());
-
-            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 25).Take(8).OrderBy(p=>p.Item1).ToArray();
-
         }
 
         #endregion

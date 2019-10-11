@@ -406,14 +406,11 @@ namespace MassSpectrometry
         {
             List<ChargeEnvelop> chargeEnvelops = new List<ChargeEnvelop>();
 
-            isoEnvelops = new List<IsoEnvelop>();
-
-            var isos = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, deconvolutionParameter).Where(p => p.Charge >= 5 && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.2).OrderByDescending(p => p.MsDeconvScore);
-
+            isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, deconvolutionParameter).Where(p => p.Charge >= 5 && p.MsDeconvScore >= 500 && p.MsDeconvSignificance > 0.2).OrderByDescending(p => p.MsDeconvScore).ToList();
 
             HashSet<double> seenMz = new HashSet<double>();
 
-            foreach (var iso in isos)
+            foreach (var iso in isoEnvelops)
             {
                 if (iso.Charge < 5 || seenMz.Overlaps(iso.ExperimentIsoEnvelop.Select(p => p.Mz)))
                 {
@@ -430,7 +427,7 @@ namespace MassSpectrometry
 
                     foreach (var mzz in mz_zs)
                     {
-                        var s = isos.Where(p => p.Charge == mzz.charge).Where(p => p.TheoPeakIndex.Contains(mzz.index)).FirstOrDefault();
+                        var s = isoEnvelops.Where(p => p.Charge == mzz.charge).Where(p => p.TheoPeakIndex.Contains(mzz.index)).FirstOrDefault();
 
                         chargeEnve.distributions.Add((mzz.charge, mzz.mz, mzz.intensity, s));
 
@@ -441,13 +438,26 @@ namespace MassSpectrometry
 
                     chargeEnvelops.Add(chargeEnve);
                 }
-                else
-                {
-                    isoEnvelops.Add(iso);
-                }
             }
 
             return chargeEnvelops;
+        }
+
+        public static Tuple<double, double, double>[] GenerateBoxes(List<IsoEnvelop> isoEnvelops)
+        {
+            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
+
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+            }
+            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
+
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 25).Take(8).OrderBy(p => p.Item1).ToArray();
+
         }
 
     }
