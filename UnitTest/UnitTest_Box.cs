@@ -35,10 +35,13 @@ namespace UnitTest
         {
             var Parameters = Program.AddParametersFromFile("");
             List<double> masses = new List<double> { 375.0, 698.16, 637.49, 666.43,  1237.5 };
+            Tuple<double, double, double>[] tuples = new Tuple<double, double, double>[] 
+            { new Tuple<double, double, double>(400.0, 636.5, 236.5), new Tuple<double, double, double>(638.5, 665.4, 26.9),
+                new Tuple<double, double, double>(667.4, 697.2, 29.8), new Tuple<double, double, double>(699.2, 1200.0, 500.8) };
             string dynamicTargets;
             string dynamicMaxITs;
-            var test = BoxCarScan.BuildDynamicBoxString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
-            //Assert.AreEqual(test, "[(400.0,636.5),(638.5,665.4),(667.4,697.2),(699.2,1200.0)]");
+            var test = BoxCarScan.BuildDynamicBoxString(Parameters, tuples, out dynamicTargets, out dynamicMaxITs);
+            Assert.AreEqual(test, "[(400.0,636.5),(638.5,665.4),(667.4,697.2),(699.2,1200.0)]");
             Assert.That(dynamicTargets == "[166666,166666,166666]");
             Assert.That(dynamicMaxITs == "[84,84,84]");
 

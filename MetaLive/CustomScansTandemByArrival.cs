@@ -93,8 +93,8 @@ namespace MetaLive
 
                 FullScan.PlaceFullScan(m_scans, Parameters);
 
-                List<double> dynamicBoxCarRange = new List<double> { 600, 700, 800, 900, 1000 };
-                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, dynamicBoxCarRange);
+                //List<double> dynamicBoxCarRange = new List<double> { 600, 700, 800, 900, 1000 };
+                //BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, dynamicBoxCarRange);
 
                 DataDependentScan.PlaceMS2Scan(m_scans, Parameters, 750);
 

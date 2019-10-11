@@ -668,7 +668,7 @@ namespace MetaLive
                         PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
                     }
                     
-                    if (!isBoxCarScan && isoEnvelops.Count > 0)
+                    if (!isBoxCarScan && isoEnvelops.Count > 8)
                     {
                         {
                             Console.WriteLine("chargeEnvelops.Count: {0}", isoEnvelops.Count);
