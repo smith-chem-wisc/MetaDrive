@@ -352,6 +352,7 @@ namespace MassSpectrometry
                 if (bestIsotopeEnvelopeForThisPeak != null)
                 {
                     bestIsotopeEnvelopeForThisPeak.MsDeconvSignificance = CalIsoEnvelopNoise(mzSpectrumXY, bestIsotopeEnvelopeForThisPeak);
+                    bestIsotopeEnvelopeForThisPeak.IntensityRatio = bestIsotopeEnvelopeForThisPeak.TotalIntensity / mzSpectrumXY.TotalIntensity;
 
                     isolatedMassesAndCharges.Add(bestIsotopeEnvelopeForThisPeak);
                     //foreach (var peak in bestIsotopeEnvelopeForThisPeak.ExperimentIsoEnvelop.Select(p => p.Item1))

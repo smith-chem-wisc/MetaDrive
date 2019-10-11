@@ -301,10 +301,6 @@ namespace MetaLive
                                         {
                                             BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
                                         }
-                                        else
-                                        {
-                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, x.dynamicBox);
-                                        }
                                         break;
                                     default:
                                         break;
@@ -656,32 +652,32 @@ namespace MetaLive
                 if (scan.HasCentroidInformation)
                 {
                     bool isBoxCarScan = IsBoxCarScan(scan);
-                    //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
+                    //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);                   
 
-                    //lock (lockerScan)
                     if (!isBoxCarScan)
                     {
                         FullScan.PlaceFullScan(m_scans, Parameters);
                     }
 
-                    var chargeEnvelops = DeconvoluateDynamicBoxRange(scan);
+                    List<ChargeEnvelop> chargeEnvelops;
 
-                    if (!isBoxCarScan && chargeEnvelops.Count > 0)
+                    var isoEnvelops = Deconvolute(scan, out chargeEnvelops);
+
+                    if (isBoxCarScan || !Parameters.BoxCarScanSetting.DoDbcForMS1)
                     {
-                        //lock (lockerScan)
+                        PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                    }
+                    
+                    if (!isBoxCarScan && isoEnvelops.Count > 0)
+                    {
                         {
-                            Console.WriteLine("chargeEnvelops.Count: {0}", chargeEnvelops.Count);
+                            Console.WriteLine("chargeEnvelops.Count: {0}", isoEnvelops.Count);
 
-                            if (!Parameters.BoxCarScanSetting.DynamicBoxCarOnlyForMS2)
+                            if (Parameters.BoxCarScanSetting.DoDbcForMS1)
                             {
-                                if (chargeEnvelops.Count== 1)
-                                {
-                                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
-                                }
-                                else if (chargeEnvelops.Count > 1 && chargeEnvelops[0].TotalIsoIntensity/chargeEnvelops[1].TotalIsoIntensity > 5)
-                                {
-                                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, chargeEnvelops.First().distributions.Select(q => q.mz).ToList());
-                                }
+                                 var boxes = GenerateBoxes(isoEnvelops);
+
+                                 BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }
                         }
                     }
@@ -694,16 +690,20 @@ namespace MetaLive
             }
         }
 
-        private List<ChargeEnvelop> DeconvoluateDynamicBoxRange(IMsScan scan)
+        private List<IsoEnvelop> Deconvolute(IMsScan scan, out List<ChargeEnvelop> chargeEnvelops)
+        {
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            List<IsoEnvelop> isoEnvelops;
+            chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops).Where(p => p.distributions_withIso.Count >= 3).ToList();
+            return isoEnvelops;
+        }
+
+        private void PlaceDynamicBoxScan(IMsScan scan, List<ChargeEnvelop> chargeEnvelops, List<IsoEnvelop> isoEnvelops)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-            List<IsoEnvelop> isoEnvelops;
-            var chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops).Where(p=>p.distributions_withIso.Count >= 3);
-
             int placeScanCount = 0;
-
+            
             foreach (var ce in chargeEnvelops)
             {
                 if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
@@ -717,7 +717,17 @@ namespace MetaLive
 
                 if (matchedCount == 0)
                 {
-                    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+                    if (Parameters.MS2ScanSetting.DoDbcMS2)
+                    {
+                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
+                    }
+                    else
+                    {
+                        var mz = ce.distributions_withIso.OrderByDescending(p => p.intensity).First().mz;
+                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+
+                    }
+                    
 
                     placeScanCount++;
 
@@ -726,6 +736,7 @@ namespace MetaLive
                         DynamicDBCExclusionList.DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 0, DateTime.Now));
                     }
                 }
+
             }
 
 
@@ -750,9 +761,23 @@ namespace MetaLive
                 }
 
             }
+        }
 
+        private Tuple<double, double, double>[] GenerateBoxes(List<IsoEnvelop> isoEnvelops)
+        {
+            var thred =  isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio/20;
+            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p=>p).ToList();
 
-            return chargeEnvelops.ToList();
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count]; 
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i-1], mzs[i], mzs[i] - mzs[i - 1]);            
+            }
+            ranges[mzs.Count-1] = new Tuple<double, double, double>(mzs.Last(), (double)Parameters.FullScanSetting.MzRangeHighBound, (double)Parameters.FullScanSetting.MzRangeHighBound - mzs.Last());
+
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 25).Take(8).OrderBy(p=>p.Item1).ToArray();
+
         }
 
         #endregion

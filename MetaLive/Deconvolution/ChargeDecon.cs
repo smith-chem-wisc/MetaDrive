@@ -437,6 +437,8 @@ namespace MassSpectrometry
                         seenMz.Add(mzz.mz);
                     }
 
+                    chargeEnve.IntensityRatio = chargeEnve.TotalIsoIntensity / mzSpectrumXY.TotalIntensity;
+
                     chargeEnvelops.Add(chargeEnve);
                 }
                 else

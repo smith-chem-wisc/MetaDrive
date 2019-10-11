@@ -19,7 +19,7 @@ BoxCarMzRangeLowBound = 400.0
 BoxCarMzRangeHighBound = 1200.0
 BoxCarMicroScans = 1
 DynamicBlockSize = 0.5
-DynamicBoxCarOnlyForMS2 = false
+DoDbcForMS1 = false
 
 [FullScanSetting]
 MaxInjectTimeInMillisecond = 20

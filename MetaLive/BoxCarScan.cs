@@ -71,7 +71,7 @@ namespace MetaLive
             }
         }
 
-        public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, List<double> dynamicBox)
+        public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)
         {
             if (m_scans.PossibleParameters.Length == 0)
             {
@@ -114,47 +114,29 @@ namespace MetaLive
 
         }
 
-        public static string BuildDynamicBoxString(Parameters parameters, List<double> dynamicBoxBeforeOrder, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
+        public static string BuildDynamicBoxString(Parameters parameters, Tuple<double, double, double>[] dynamicBox, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
         {
-            //The dynamicBox list should be ordered.
-            var dynamicBox = dynamicBoxBeforeOrder.Where(p=>p<=parameters.BoxCarScanSetting.BoxCarMzRangeHighBound && p>=parameters.BoxCarScanSetting.BoxCarMzRangeLowBound).OrderBy(p => p).ToList();
-
             string dynamicBoxRanges = "[";
- 
-            dynamicBoxRanges += "(";
-            dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString("0.0");
-            dynamicBoxRanges += ",";
 
-            dynamicBoxRanges += (dynamicBox[0] - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
-
-            dynamicBoxRanges += "),";
-
-            for (int i = 1; i < dynamicBox.Count; i++)
+            foreach (var box in dynamicBox)
             {
-                var mz = dynamicBox[i];
-                var mz_front = dynamicBox[i - 1];
                 dynamicBoxRanges += "(";
-                dynamicBoxRanges += (mz_front + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+                dynamicBoxRanges += (box.Item1+2.5).ToString("0.00");
                 dynamicBoxRanges += ",";
-                dynamicBoxRanges += (mz - parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
+                dynamicBoxRanges += (box.Item2-2.5).ToString("0.00");
                 dynamicBoxRanges += "),";
             }
 
-            dynamicBoxRanges += "(";
-            dynamicBoxRanges += (dynamicBox.Last() + parameters.BoxCarScanSetting.DynamicBlockSize).ToString("0.0");
-            dynamicBoxRanges += ",";
-            dynamicBoxRanges += parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString("0.0");
-            dynamicBoxRanges += ")";
-
+            dynamicBoxRanges.Remove(0, dynamicBoxRanges.Count()-1);
             dynamicBoxRanges += "]";
 
 
             //Boxtargets and BoxMaxITs
             dynamicBoxTargets = "[";
-            for (int i = 0; i < dynamicBox.Count; i++)
+            for (int i = 0; i < dynamicBox.Length; i++)
             {
-                dynamicBoxTargets += parameters.BoxCarScanSetting.BoxCarAgcTarget / dynamicBox.Count;
-                if (i != dynamicBox.Count-1)
+                dynamicBoxTargets += parameters.BoxCarScanSetting.BoxCarAgcTarget / dynamicBox.Length;
+                if (i != dynamicBox.Length-1)
                 {
                     dynamicBoxTargets += ",";
                 }
@@ -162,10 +144,10 @@ namespace MetaLive
             dynamicBoxTargets += "]";
 
             dynamicBoxMaxITs = "[";
-            for (int i = 0; i < dynamicBox.Count; i++)
+            for (int i = 0; i < dynamicBox.Length; i++)
             {
-                dynamicBoxMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / dynamicBox.Count;
-                if (i != dynamicBox.Count-1)
+                dynamicBoxMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / dynamicBox.Length;
+                if (i != dynamicBox.Length - 1)
                 {
                     dynamicBoxMaxITs += ",";
                 }
