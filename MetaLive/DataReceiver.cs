@@ -675,7 +675,18 @@ namespace MetaLive
 
                             if (Parameters.BoxCarScanSetting.DoDbcForMS1)
                             {
-                                 var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
+                                lock (lockerExclude)
+                                {
+                                    var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+                                    var isos = isoEnvelops.Where(p => p.IntensityRatio > thred);
+                                    foreach (var x in isos)
+                                    {                                      
+                                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(x.ExperimentIsoEnvelop.First().Mz, x.Charge, DateTime.Now));
+                                    }
+
+                                }
+
+                                var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
 
                                  BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }

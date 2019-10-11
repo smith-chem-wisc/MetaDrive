@@ -456,7 +456,7 @@ namespace MassSpectrometry
             }
             ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
 
-            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 25).Take(8).OrderBy(p => p.Item1).ToArray();
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
 
         }
 
