@@ -187,9 +187,11 @@ namespace MassSpectrometry
                 var scaleArrayOfTheoPeaks = ScaleTheoEnvelop(arrayOfPeaks, arrayOfTheoPeaks);
 
                 //The following 3 lines are for calculating monoisotopicMass, origin from Stephan, I don't understand it, and may optimize it in the future. (Lei)
-                var extrapolatedMonoisotopicMass = candidateForMostIntensePeakMz.ToMass(chargeState) - diffToMonoisotopic[massIndex]; // Optimized for proteoforms!!
-                var lowestMass = arrayOfPeaks.Min(b => b.Mz).ToMass(chargeState); // But may actually observe this small peak
-                var monoisotopicMass = Math.Abs(extrapolatedMonoisotopicMass - lowestMass) < 0.5 ? lowestMass : extrapolatedMonoisotopicMass;
+                //var extrapolatedMonoisotopicMass = candidateForMostIntensePeakMz.ToMass(chargeState) - diffToMonoisotopic[massIndex]; // Optimized for proteoforms!!
+                //var lowestMass = arrayOfPeaks.Min(b => b.Mz).ToMass(chargeState); // But may actually observe this small peak
+                //var monoisotopicMass = Math.Abs(extrapolatedMonoisotopicMass - lowestMass) < 0.5 ? lowestMass : extrapolatedMonoisotopicMass;
+
+                var monoisotopicMass = candidateForMostIntensePeakMz.ToMass(chargeState) - diffToMonoisotopic[massIndex];
 
                 IsoEnvelop isoEnvelop = new IsoEnvelop(arrayOfPeaks, scaleArrayOfTheoPeaks, monoisotopicMass, chargeState, arrayOfTheoPeakIndexes);
                 return isoEnvelop;
@@ -249,7 +251,6 @@ namespace MassSpectrometry
             IsoEnvelop bestIsotopeEnvelopeForThisPeak = null;
 
             var candidateForMostIntensePeakMz = mzSpectrumXY.XArray[candidateForMostIntensePeak];
-
 
             //Find possible chargeStates.
             List<int> allPossibleChargeState = new List<int>();
@@ -338,12 +339,20 @@ namespace MassSpectrometry
             ////Deconvolution by Intensity decending order
             //foreach (var candidateForMostIntensePeak in ExtractIndicesByY())
             ////Deconvolution by MZ increasing order
-            foreach (var candidateForMostIntensePeak in mzSpectrumXY.ExtractIndices(theRange.Minimum, theRange.Maximum))
+
+            double intensityThread = mzSpectrumXY.TotalIntensity / mzSpectrumXY.Size;
+            //foreach (var candidateForMostIntensePeak in mzSpectrumXY.ExtractIndices(theRange.Minimum, theRange.Maximum))
+            for (int candidateForMostIntensePeak = 0; candidateForMostIntensePeak < mzSpectrumXY.XArray.Length - 1; candidateForMostIntensePeak++)
             {
                 //if (seenPeaks.Contains(XArray[candidateForMostIntensePeak]))
                 //{
                 //    continue;
                 //}
+
+                if (mzSpectrumXY.YArray[candidateForMostIntensePeak] <= intensityThread)
+                {
+                    continue;
+                }
 
                 double noiseLevel = CalNoiseLevel();
 

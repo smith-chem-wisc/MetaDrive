@@ -406,7 +406,7 @@ namespace MassSpectrometry
         {
             List<ChargeEnvelop> chargeEnvelops = new List<ChargeEnvelop>();
 
-            isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, deconvolutionParameter).Where(p => p.Charge >= 5 && p.MsDeconvScore >= 500 && p.MsDeconvSignificance > 0.2).OrderByDescending(p => p.MsDeconvScore).ToList();
+            isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, deconvolutionParameter).Where(p => p.Charge >= 5 && p.MsDeconvScore*p.MsDeconvSignificance >= 100).OrderByDescending(p => p.MsDeconvScore).ToList();
 
             HashSet<double> seenMz = new HashSet<double>();
 

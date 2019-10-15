@@ -654,11 +654,6 @@ namespace MetaLive
                     bool isBoxCarScan = IsBoxCarScan(scan);
                     //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);                   
 
-                    if (!isBoxCarScan)
-                    {
-                        FullScan.PlaceFullScan(m_scans, Parameters);
-                    }
-
                     List<ChargeEnvelop> chargeEnvelops;
 
                     var isoEnvelops = Deconvolute(scan, out chargeEnvelops);
@@ -688,9 +683,14 @@ namespace MetaLive
 
                                 var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
 
-                                 BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
+                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }
                         }
+                    }
+
+                    if (!isBoxCarScan)
+                    {
+                        FullScan.PlaceFullScan(m_scans, Parameters);
                     }
                 }
             }
@@ -705,7 +705,7 @@ namespace MetaLive
         {
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             List<IsoEnvelop> isoEnvelops;
-            chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops).Where(p => p.distributions_withIso.Count >= 3).ToList();
+            chargeEnvelops = ChargeDecon.ChargeDeconIsoForScan(spectrum, Parameters.DeconvolutionParameter, out isoEnvelops).OrderByDescending(p=>p.ChargeDeconScore).Where(p => p.distributions_withIso.Count >= 2).ToList();
             return isoEnvelops;
         }
 
@@ -728,14 +728,18 @@ namespace MetaLive
 
                 if (matchedCount == 0)
                 {
+                    Console.WriteLine("DynamicDBCExclusionList didn't match.");
                     if (Parameters.MS2ScanSetting.DoDbcMS2)
                     {
                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
                     }
                     else
                     {
-                        var mz = ce.distributions_withIso.OrderByDescending(p => p.intensity).First().mz;
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                        var mz = ce.distributions_withIso.OrderByDescending(p => p.intensity).First().isoEnvelop.ExperimentIsoEnvelop.First().Mz;
+                        if (DynamicExclusionList.isNotInExclusionList(mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                        {
+                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, mz);
+                        }
                     }
                     
                     placeScanCount++;
@@ -743,12 +747,21 @@ namespace MetaLive
                     lock (lockerExclude)
                     {
                         DynamicDBCExclusionList.DBCExclusionList.Enqueue(new DynamicDBCValue(mzs, 0, DateTime.Now));
-                        foreach (var x in ce.distributions)
+                        foreach (var x in ce.distributions_withIso)
                         {
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(x.mz, x.charge, DateTime.Now));
+                            var mz = x.isoEnvelop.ExperimentIsoEnvelop.First().Mz;
+                            if (DynamicExclusionList.isNotInExclusionList(mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                            {
+                                DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(mz, x.charge, DateTime.Now));
+                                Console.WriteLine("1 ExclusionList Enqueue: {0}", mz);
+                            }
                         }
                         
                     }
+                }
+                else
+                {
+                    Console.WriteLine("DynamicDBCExclusionList did match.");
                 }
             }
 
@@ -766,7 +779,7 @@ namespace MetaLive
                     lock (lockerExclude)
                     {
                         DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
-                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                        Console.WriteLine("2 ExclusionList Enqueue: {0}", iso.ExperimentIsoEnvelop.First().Mz);
                     }
 
                     DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);

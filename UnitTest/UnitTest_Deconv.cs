@@ -246,7 +246,8 @@ namespace UnitTest
         [Test]
         public static void Test_ChargeDeconvFile()
         {
-            string FilepathMZML = "E:\\MassData\\20190912_TD_yeast_DBC\\20190912_Yeast7_DBC_FullScanFirst_T3_TopDown.mzML";
+            //string FilepathMZML = "E:\\MassData\\20190912_TD_yeast_DBC\\20190912_Yeast7_DBC_FullScanFirst_T3_TopDown.mzML";
+            string FilepathMZML = "E:\\MassData\\20191009_F4\\20191009_J1-F4_DDA4.mzML";
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
             var scans = file.GetAllScansList().Where(p=>p.MsnOrder == 1).ToArray();         
 
