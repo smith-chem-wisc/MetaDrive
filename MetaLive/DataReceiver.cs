@@ -650,32 +650,30 @@ namespace MetaLive
             {
                 //Is MS1 Scan
                 if (scan.HasCentroidInformation)
-                {
-                    bool isBoxCarScan = IsBoxCarScan(scan);
-                    //Console.WriteLine("MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);                   
-
+                {           
                     List<ChargeEnvelop> chargeEnvelops;
 
                     var isoEnvelops = Deconvolute(scan, out chargeEnvelops);
 
-                    if (isBoxCarScan || !Parameters.BoxCarScanSetting.DoDbcForMS1)
-                    {
-                        PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
-                    }
-                    
-                    if (!isBoxCarScan && isoEnvelops.Count > 8)
-                    {
-                        {
-                            Console.WriteLine("chargeEnvelops.Count: {0}", isoEnvelops.Count);
+                    Console.WriteLine("chargeEnvelops.Count: {0}", isoEnvelops.Count);
 
-                            if (Parameters.BoxCarScanSetting.DoDbcForMS1)
+                    if (Parameters.BoxCarScanSetting.DoDbcForMS1)
+                    {
+                        if (IsBoxCarScan(scan))
+                        {
+                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                            FullScan.PlaceFullScan(m_scans, Parameters);
+                        }
+                        else
+                        {
+                            if (chargeEnvelops.Count >= 1 || isoEnvelops.Count >= 5)
                             {
                                 lock (lockerExclude)
                                 {
                                     var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
                                     var isos = isoEnvelops.Where(p => p.IntensityRatio > thred);
                                     foreach (var x in isos)
-                                    {                                      
+                                    {
                                         DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(x.ExperimentIsoEnvelop.First().Mz, x.Charge, DateTime.Now));
                                     }
 
@@ -685,15 +683,22 @@ namespace MetaLive
 
                                 BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }
+                            else
+                            {
+                                FullScan.PlaceFullScan(m_scans, Parameters);
+                            }
                         }
                     }
-
-                    if (!isBoxCarScan)
+                    else
                     {
+
+                        PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+
                         FullScan.PlaceFullScan(m_scans, Parameters);
                     }
                 }
             }
+
             catch (Exception e)
             {
                 Console.WriteLine("AddScanIntoQueue_DynamicBox Exception!");
