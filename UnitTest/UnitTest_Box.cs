@@ -26,7 +26,6 @@ namespace UnitTest
         public static void boxCarRangeTest()
         {
             var Parameters = Program.AddParametersFromFile("");
-            var x = Parameters.BoxCarScanSetting.BoxCarMsxInjectRanges;
             Assert.AreEqual(Parameters.BoxCarScanSetting.BoxCarScans, 2);
         }
 

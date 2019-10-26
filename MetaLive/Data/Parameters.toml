@@ -2,7 +2,6 @@
 TestMod = false
 MethodType = "StaticBoxCar"
 TotalTimeInMinute = 150
-IsBottomUp = true
 Polarity = 0
 SourceCID = 0
 AGC_Mode = 1
@@ -20,6 +19,7 @@ BoxCarMzRangeHighBound = 1200.0
 BoxCarMicroScans = 1
 DynamicBlockSize = 0.5
 DoDbcForMS1 = false
+PrecursorSkipScan = false
 
 [FullScanSetting]
 MaxInjectTimeInMillisecond = 20

@@ -691,10 +691,19 @@ namespace MetaLive
                     }
                     else
                     {
+                        if (Parameters.BoxCarScanSetting.PrecursorSkipScan)
+                        {
+                            FullScan.PlaceFullScan(m_scans, Parameters);
 
-                        PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                        }
+                        else
+                        {
+                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
 
-                        FullScan.PlaceFullScan(m_scans, Parameters);
+                            FullScan.PlaceFullScan(m_scans, Parameters);
+                        }
+
                     }
                 }
             }

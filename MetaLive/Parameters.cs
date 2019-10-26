@@ -30,7 +30,6 @@ namespace MetaLive
         public bool TestMod { get; set; }
         public MethodTypes MethodType { get; set; }
         public int TotalTimeInMinute { get; set; }
-        public bool IsBottomUp { get; set; }
         public int Polarity { get; set; }
         public int SourceCID { get; set; }
         public int AGC_Mode { get; set; }
@@ -50,87 +49,7 @@ namespace MetaLive
         public int BoxCarMicroScans { get; set; }
         public double DynamicBlockSize { get; set; }
         public bool DoDbcForMS1 { get; set; }
-
-        //TO DO: The BoxCar Ranges should be optimized based on real data
-        public string[] BoxCarMsxInjectRanges
-        {
-            get
-            {
-                var msxInjectRanges = new string[BoxCarScans];
-                double x = ((double)BoxCarMzRangeHighBound - (double)BoxCarMzRangeLowBound) / BoxCarBoxes;
-                double y = x / BoxCarScans;
-                for (int i = 0; i < BoxCarScans; i++)
-                {
-                    msxInjectRanges[i] = "[";
-                    for (int j = 0; j < BoxCarBoxes; j++)
-                    {
-                        msxInjectRanges[i] += "(";
-                        var lbox = BoxCarMzRangeLowBound + x * j + y * i - (double)BoxCarOverlap / 2;
-                        if (j == 0)
-                        {
-                            lbox += (double)BoxCarOverlap / 2;
-                        }
-                        msxInjectRanges[i] += lbox.ToString("0.0");
-
-                        msxInjectRanges[i] += ",";
-
-                        var rbox = BoxCarMzRangeLowBound + x * j + y * i + y + (double)BoxCarOverlap / 2;
-                        if (j == 0)
-                        {
-                            rbox += (double)BoxCarOverlap / 2;
-                        }
-                        msxInjectRanges[i] += rbox.ToString("0.0");
-
-                        msxInjectRanges[i] += ")";
-                        if (j != BoxCarBoxes - 1)
-                        {
-                            msxInjectRanges[i] += ",";
-                        }
-                    }
-                    msxInjectRanges[i] += "]";
-                }
-
-                return msxInjectRanges;
-            }
-
-            set { }
-        }
-
-        public string BoxCarMsxInjectTargets
-        {
-            get
-            {
-                var msxInjectTarget = "[";
-                for (int i = 0; i < BoxCarBoxes; i++)
-                {
-                    msxInjectTarget += BoxCarAgcTarget / BoxCarBoxes;
-                    if (i != BoxCarBoxes - 1)
-                    {
-                        msxInjectTarget += ",";
-                    }
-                }
-                msxInjectTarget += "]";
-                return msxInjectTarget;
-            }
-        }
-
-        public string BoxCarMsxInjectMaxITs
-        {
-            get
-            {
-                var msxInjectMaxITs= "[";
-                for (int i = 0; i < BoxCarBoxes; i++)
-                {
-                    msxInjectMaxITs += BoxCarMaxInjectTimeInMillisecond / BoxCarBoxes;
-                    if (i != BoxCarBoxes - 1)
-                    {
-                        msxInjectMaxITs += ",";
-                    }
-                }
-                msxInjectMaxITs += "]";
-                return msxInjectMaxITs;
-            }
-        }
+        public bool PrecursorSkipScan { get; set; }
 
         public Tuple<double, double, double>[] SelectRanges(double[] mz, double[] intensity)
         {
