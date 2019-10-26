@@ -82,7 +82,7 @@ namespace MetaLive
             var apath = System.IO.Path.GetDirectoryName(TrueFileName);
             var name = System.IO.Path.GetFileNameWithoutExtension(TrueFileName);
             var time = DateTime.Now.ToString("yyyy-MM-dd-HH-mm");
-            Nett.Toml.WriteFile(parameters, System.IO.Path.Combine(apath, name + "_" + time + "_running.toml"));
+            Nett.Toml.WriteFile(parameters, System.IO.Path.Combine(apath, @"run", name + "_" + time + "_running.toml"));
         }
 
     }
