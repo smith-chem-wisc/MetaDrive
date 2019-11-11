@@ -337,24 +337,24 @@ namespace MetaLive
 
                     DateTime dateTime = DateTime.Now;
 
-                    Console.WriteLine("Check the dynamic exclusionList.");
+                    Console.WriteLine("Check the dynamic DBC exclusionList.");
 
                     lock (lockerExclude)
                     {
                         bool toDeque = true;
 
-                        while (toDeque && DynamicDBCExclusionList.DBCExclusionList.Count > 0)
+                        while (toDeque && DynamicExclusionList.exclusionList.Count > 0)
                         {
-                            if (dateTime.Subtract(DynamicDBCExclusionList.DBCExclusionList.Peek().DateTime).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
+                            if (dateTime.Subtract(DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
                             {
-                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, DynamicDBCExclusionList.DBCExclusionList.Peek().DateTime);
+                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, DynamicExclusionList.exclusionList.Peek().Item3);
                                 toDeque = false;
                             }
                             else
                             {
 
-                                DynamicDBCExclusionList.DBCExclusionList.Dequeue();
-                                Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicDBCExclusionList.DBCExclusionList.Count);
+                                DynamicExclusionList.exclusionList.Dequeue();
+                                Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicExclusionList.exclusionList.Count);
 
                             }
                         }
@@ -367,6 +367,7 @@ namespace MetaLive
                 Console.WriteLine("DynamicExclusionListDeqeue Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
+            
         }
 
         #endregion
@@ -612,24 +613,24 @@ namespace MetaLive
 
                     DateTime dateTime = DateTime.Now;
 
-                    Console.WriteLine("Check the dynamic DBC exclusionList.");
+                    Console.WriteLine("Check the dynamic exclusionList.");
 
                     lock (lockerExclude)
                     {
                         bool toDeque = true;
 
-                        while (toDeque && DynamicExclusionList.exclusionList.Count > 0)
+                        while (toDeque && DynamicDBCExclusionList.DBCExclusionList.Count > 0)
                         {
-                            if (dateTime.Subtract(DynamicExclusionList.exclusionList.Peek().Item3).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
+                            if (dateTime.Subtract(DynamicDBCExclusionList.DBCExclusionList.Peek().DateTime).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
                             {
-                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, DynamicExclusionList.exclusionList.Peek().Item3);
+                                Console.WriteLine("The dynamic exclusionList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, DynamicDBCExclusionList.DBCExclusionList.Peek().DateTime);
                                 toDeque = false;
                             }
                             else
                             {
 
-                                DynamicExclusionList.exclusionList.Dequeue();
-                                Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicExclusionList.exclusionList.Count);
+                                DynamicDBCExclusionList.DBCExclusionList.Dequeue();
+                                Console.WriteLine("{0:HH:mm:ss,fff} ExclusionList Dequeue: {1}", dateTime, DynamicDBCExclusionList.DBCExclusionList.Count);
 
                             }
                         }

@@ -62,15 +62,59 @@ namespace MetaLive
 
         public static Tuple<double, double, double>[] GenerateBoxes(List<double> mzs)
         {
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[(mzs.Count-1)/2];
 
-            for (int i = 1; i < mzs.Count; i++)
+            for (int i = 0; i < (mzs.Count - 1)/ 2; i++)
             {
-                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+                ranges[i] = new Tuple<double, double, double>(mzs[i*2 ], mzs[i*2 +1], mzs[i*2] - mzs[i*2+1]);
             }
-            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
 
-            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
+            return ranges;
+        }
+
+        //gamma distribution is used to mimic the distribution of intensities.
+        private static List<double> GammaDistributionSeparation(Parameters parameters)
+        {
+            var alpha = 2;
+            var beta = 3;
+
+            var start = 0.1;
+            var end = 0.9;
+
+            List<double> sep = new List<double>();
+            for (int i = 0; i < 25; i++)
+            {
+                var p = start + (end - start) / 24 * i;
+                var sepx = MathNet.Numerics.Distributions.Gamma.InvCDF(alpha, beta, p);
+                sep.Add(sepx);
+            }
+
+            var firstMass = 400.0;
+            var lastMass = 1600.0;
+            var scale = lastMass - firstMass;
+
+            List<double> scale_sep = new List<double>();
+            for (int i = 0; i < sep.Count; i++)
+            {
+                var x = scale * (sep[i] - sep.First()) / (sep.Last() - sep.First()) + firstMass;
+                scale_sep.Add(x);
+            }
+
+            return scale_sep;
+        }
+
+        public static void GetStaticBox(Parameters parameters, List<double> mzs)
+        {
+            string dynamicTargets;
+            string dynamicMaxIts;
+            StaticBoxCar_2_12_Scan = new string[2];
+            for (int i = 0; i < 2; i++)
+            {
+                var staticBoxes = GenerateBoxes(mzs);
+                StaticBoxCar_2_12_Scan[i] = BuildDynamicBoxString(parameters, staticBoxes, out dynamicTargets, out dynamicMaxIts);
+                StaticBoxCarDynamicTargets = dynamicTargets;
+                StaticBoxCarDynamicMaxIts = dynamicMaxIts;
+            }
         }
 
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)

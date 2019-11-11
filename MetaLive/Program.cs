@@ -85,40 +85,5 @@ namespace MetaLive
             Nett.Toml.WriteFile(parameters, System.IO.Path.Combine(apath, @"run", name + "_" + time + "_running.toml"));
         }
 
-        private static void CalculateStaticBox(Parameters parameters)
-        {
-            var alpha = 2;
-            var beta = 3;
-
-            var start = 0.1;
-            var end = 0.9;
-
-            List<double> sep = new List<double>();
-            for (int i = 0; i < 25; i++)
-            {
-                var p = start + (end - start) / 24 * i;
-                var sepx = MathNet.Numerics.Distributions.Gamma.InvCDF(alpha, beta, p);
-                sep.Add(sepx);
-            }
-
-            var firstMass = 400.0;
-            var lastMass = 1600.0;
-            var scale = lastMass - firstMass;
-
-            List<double> scale_sep = new List<double>();
-            for (int i = 0; i < sep.Count; i++)
-            {
-                var x = scale * (sep[i] - sep.First()) / (sep.Last() - sep.First()) + firstMass;
-                scale_sep.Add(x);
-            }
-
-
-
-            //string dynamicTargets;
-            //string dynamicMaxIts;
-            //BoxCarScan.StaticBoxCar_2_12_Scan =  BoxCarScan.BuildDynamicBoxString(parameters,  x, out dynamicTargets, out dynamicMaxIts);
-            //BoxCarScan.StaticBoxCarDynamicTargets = dynamicTargets;
-            //BoxCarScan.StaticBoxCarDynamicMaxIts = dynamicMaxIts;
-        }
     }
 }

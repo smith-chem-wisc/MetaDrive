@@ -341,7 +341,7 @@ namespace MassSpectrometry
             //foreach (var candidateForMostIntensePeak in ExtractIndicesByY())
             ////Deconvolution by MZ increasing order
 
-            double intensityThread = mzSpectrumXY.TotalIntensity / mzSpectrumXY.Size;
+            //double intensityThread = mzSpectrumXY.TotalIntensity / mzSpectrumXY.Size;
             //foreach (var candidateForMostIntensePeak in mzSpectrumXY.ExtractIndices(theRange.Minimum, theRange.Maximum))
             for (int candidateForMostIntensePeak = 0; candidateForMostIntensePeak < mzSpectrumXY.XArray.Length - 1; candidateForMostIntensePeak++)
             {
