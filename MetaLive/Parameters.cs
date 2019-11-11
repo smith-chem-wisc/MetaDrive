@@ -49,7 +49,7 @@ namespace MetaLive
         public int BoxCarMicroScans { get; set; }
         public double DynamicBlockSize { get; set; }
         public bool DoDbcForMS1 { get; set; }
-        public bool PrecursorSkipScan { get; set; }
+        public bool PrecursorSkipScan { get; set; } //Is the precursors from one MS1 scan before the nearest one
 
         public Tuple<double, double, double>[] SelectRanges(double[] mz, double[] intensity)
         {

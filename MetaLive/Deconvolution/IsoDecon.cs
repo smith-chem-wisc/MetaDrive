@@ -289,7 +289,8 @@ namespace MassSpectrometry
                     if (temp != null && bestIsotopeEnvelopeForThisPeak != null)
                     {
                         int cd = temp.Charge / bestIsotopeEnvelopeForThisPeak.Charge;
-                        if (cd > 1 && temp.Charge == bestIsotopeEnvelopeForThisPeak.Charge * cd)
+                        if (temp.ExperimentIsoEnvelop.Where(p=>p.Intensity!=0).Count() >= bestIsotopeEnvelopeForThisPeak.ExperimentIsoEnvelop.Where(p => p.Intensity != 0).Count() + 3 
+                            && cd > 1 && temp.Charge == bestIsotopeEnvelopeForThisPeak.Charge * cd)
                         {
                             bestIsotopeEnvelopeForThisPeak = temp;
                         }
@@ -349,10 +350,10 @@ namespace MassSpectrometry
                 //    continue;
                 //}
 
-                if (mzSpectrumXY.YArray[candidateForMostIntensePeak] <= intensityThread)
-                {
-                    continue;
-                }
+                //if (mzSpectrumXY.YArray[candidateForMostIntensePeak] <= intensityThread)
+                //{
+                //    continue;
+                //}
 
                 double noiseLevel = CalNoiseLevel();
 
@@ -375,9 +376,22 @@ namespace MassSpectrometry
 
             List<IsoEnvelop> isoEnvelops = new List<IsoEnvelop>();
 
+            //TO DO: consider peak overlap
             foreach (var ok in isolatedMassesAndCharges.OrderByDescending(b => b.MsDeconvScore))
             {
-                if (seen.Overlaps(ok.ExperimentIsoEnvelop.Select(b => b.Mz)))
+                //if (seen.Overlaps(ok.ExperimentIsoEnvelop.Select(b => b.Mz)))
+                //{
+                //    continue;
+                //}
+                int noOverlap = 0;
+                foreach (var ah in ok.ExistedExperimentPeak.Select(b => b.Mz))
+                {
+                    if (!seen.Contains(ah))
+                    {
+                        noOverlap++;
+                    }
+                }
+                if (noOverlap < 2)
                 {
                     continue;
                 }
@@ -385,10 +399,11 @@ namespace MassSpectrometry
                 {
                     seen.Add(ah);
                 }
-                //yield return ok;
+
                 isoEnvelops.Add(ok);
             }
 
+            
             var orderedIsoEnvelops = isoEnvelops.OrderBy(p => p.ExperimentIsoEnvelop.First().Mz).ToList();
             FindLabelPair(orderedIsoEnvelops, deconvolutionParameter);
 
@@ -404,7 +419,7 @@ namespace MassSpectrometry
                 return;
             }
 
-            double[] monoMzs = isoEnvelops.Select(p => p.ExperimentIsoEnvelop.First().Mz).ToArray();
+            double[] monoMzs = isoEnvelops.Select(p => p.Mz).ToArray();
 
             foreach (var iso in isoEnvelops)
             {
@@ -413,9 +428,10 @@ namespace MassSpectrometry
                     continue;
                 }
 
-                for (int i = 1; i <= deconvolutionParameter.MaxmiumLabelNumber; i++)
+                for (int i = -1; i <= deconvolutionParameter.MaxmiumLabelNumber; i++)
                 {
-                    var possiblePairMass = iso.MonoisotopicMass + deconvolutionParameter.PartnerMassDiff * i;
+                    //var possiblePairMass = iso.MonoisotopicMass + deconvolutionParameter.PartnerMassDiff * i;
+                    var possiblePairMass = iso.MonoisotopicMass + deconvolutionParameter.PartnerMassDiff + (i-1)* 1.00289;
                     var possiblePairMz = possiblePairMass.ToMz(iso.Charge);
 
                     var closestIsoIndex = GetClosestIndexInArray(possiblePairMz, monoMzs);
@@ -425,12 +441,13 @@ namespace MassSpectrometry
                         && iso.Charge == isoEnvelops.ElementAt(closestIsoIndex.Value).Charge)
                     {
                         var ratio = iso.TotalIntensity / isoEnvelops.ElementAt(closestIsoIndex.Value).TotalIntensity;
-                        if (0.5 <= ratio && ratio <= 2)
+                        if (0.2 <= ratio && ratio <= 5)
                         {
                             iso.HasPartner = true;
                             iso.IsLight = true;
                             iso.Partner = isoEnvelops.ElementAt(closestIsoIndex.Value);
                             isoEnvelops.ElementAt(closestIsoIndex.Value).HasPartner = true;
+                            break;
                         }
                     }
                 }

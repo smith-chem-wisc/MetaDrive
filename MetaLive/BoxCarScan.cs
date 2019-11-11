@@ -10,12 +10,16 @@ namespace MetaLive
 {
     public class BoxCarScan
     {
-        public static string[] StaticBoxCar_2_12_Scan = new string[2]
-        { "[(400, 423.2), (441.2, 459.9), (476.3, 494.3), (510.3, 528.8), (545, 563.8), (580.8, 600.3), (618.4, 639.8), " +
-                "(660.3, 684.3), (708.3, 735.4), (764.4, 799.9),(837.9, 885.4), (945, 1032)]",
-        "[(422.2,442.2), (458.9,477.3), (493.3,511.3), (527.8,546), (562.8,581.8), (599.3, 619.4), (638.8, 661.3), " +
-                "(683.3, 709.3), (734.4, 765.4), (798.9, 838.9), (884.4, 946), (1031, 1201)]"
-        };
+        //public static string[] StaticBoxCar_2_12_Scan = new string[2]
+        //{ "[(400, 423.2), (441.2, 459.9), (476.3, 494.3), (510.3, 528.8), (545, 563.8), (580.8, 600.3), (618.4, 639.8), " +
+        //        "(660.3, 684.3), (708.3, 735.4), (764.4, 799.9),(837.9, 885.4), (945, 1032)]",
+        //"[(422.2,442.2), (458.9,477.3), (493.3,511.3), (527.8,546), (562.8,581.8), (599.3, 619.4), (638.8, 661.3), " +
+        //        "(683.3, 709.3), (734.4, 765.4), (798.9, 838.9), (884.4, 946), (1031, 1200)]"
+        //};
+
+        public static string[] StaticBoxCar_2_12_Scan { get; set; }
+        public static string StaticBoxCarDynamicTargets { get; set; }
+        public static string StaticBoxCarDynamicMaxIts { get; set; }
 
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters)
         {
@@ -27,8 +31,8 @@ namespace MetaLive
             ICustomScan scan = m_scans.CreateCustomScan();
             scan.Values["FirstMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeLowBound.ToString();
             scan.Values["LastMass"] = parameters.BoxCarScanSetting.BoxCarMzRangeHighBound.ToString();
-            scan.Values["IsolationRangeLow"] = (parameters.BoxCarScanSetting.BoxCarMzRangeLowBound - 200).ToString();
-            scan.Values["IsolationRangeHigh"] = (parameters.BoxCarScanSetting.BoxCarMzRangeHighBound + 200).ToString();
+            scan.Values["IsolationRangeLow"] = (parameters.BoxCarScanSetting.BoxCarMzRangeLowBound).ToString();
+            scan.Values["IsolationRangeHigh"] = (parameters.BoxCarScanSetting.BoxCarMzRangeHighBound).ToString();
 
             scan.Values["MaxIT"] = parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond.ToString();
             scan.Values["Resolution"] = parameters.BoxCarScanSetting.BoxCarResolution.ToString();
@@ -43,55 +47,30 @@ namespace MetaLive
             scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
             scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();
 
-            scan.Values["MsxInjectTargets"] = BoxCarMsxInjectTargets(parameters);
-            scan.Values["MsxInjectMaxITs"] = BoxCarMsxInjectMaxITs(parameters);
+            scan.Values["MsxInjectTargets"] = StaticBoxCarDynamicTargets;
+            scan.Values["MsxInjectMaxITs"] = StaticBoxCarDynamicMaxIts;
             scan.Values["MsxInjectNCEs"] = "[]";
             scan.Values["MsxInjectDirectCEs"] = "[]";
             for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
-            {
-               
+            {               
                 scan.Values["MsxInjectRanges"] = StaticBoxCar_2_12_Scan[i];
-                
-                //scan.Values["MsxInjectRanges"] = parameters.BoxCarScanSetting.BoxCarMsxInjectRanges[i];
-
+              
                 Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
                 m_scans.SetCustomScan(scan);
             }
         }
 
-        //TO DO: it will calculate the same thing for each scan
-        public static string BoxCarMsxInjectTargets(Parameters parameters)
+        public static Tuple<double, double, double>[] GenerateBoxes(List<double> mzs)
         {
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
 
-            var msxInjectTarget = "[";
-            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarBoxes; i++)
+            for (int i = 1; i < mzs.Count; i++)
             {
-                msxInjectTarget += parameters.BoxCarScanSetting.BoxCarAgcTarget / parameters.BoxCarScanSetting.BoxCarBoxes;
-                if (i != parameters.BoxCarScanSetting.BoxCarBoxes - 1)
-                {
-                    msxInjectTarget += ",";
-                }
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
             }
-            msxInjectTarget += "]";
-            return msxInjectTarget;
+            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
 
-        }
-
-        public static string BoxCarMsxInjectMaxITs(Parameters parameters)
-        {
-
-            var msxInjectMaxITs = "[";
-            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarBoxes; i++)
-            {
-                msxInjectMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / parameters.BoxCarScanSetting.BoxCarBoxes;
-                if (i != parameters.BoxCarScanSetting.BoxCarBoxes - 1)
-                {
-                    msxInjectMaxITs += ",";
-                }
-            }
-            msxInjectMaxITs += "]";
-            return msxInjectMaxITs;
-
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
         }
 
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)

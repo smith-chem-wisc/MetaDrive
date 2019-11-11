@@ -443,6 +443,7 @@ namespace MassSpectrometry
             return chargeEnvelops;
         }
 
+        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
         public static Tuple<double, double, double>[] GenerateBoxes(List<IsoEnvelop> isoEnvelops)
         {
             var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;

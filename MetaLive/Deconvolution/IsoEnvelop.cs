@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-
+using Chemistry;
 namespace MassSpectrometry
 {
     public class IsoEnvelop
@@ -23,6 +23,22 @@ namespace MassSpectrometry
         public List<int> TheoPeakIndex { get; set; }
 
         public double MonoisotopicMass { get; set; }
+
+        public double Mz
+        {
+            get
+            {
+                return MonoisotopicMass.ToMz(Charge);
+            }
+        }
+
+        public MzPeak[] ExistedExperimentPeak
+        {
+            get
+            {
+                return ExperimentIsoEnvelop.Where(p => p.Intensity > 0).ToArray();
+            }
+        }
 
         public double TotalIntensity
         {
