@@ -999,12 +999,6 @@ namespace MetaLive
                 {
                     Console.WriteLine("MS1 Scan arrived Partner.");
 
-                    while (UserDefinedScans.Count > 0 )
-                    {
-                        var x = UserDefinedScans.Dequeue();
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
-                    }
-
                     DeconvoluteFindPartners(scan);
 
                     //if (!IsBoxCarScan(scan))
@@ -1013,6 +1007,12 @@ namespace MetaLive
                     //}
 
                     FullScan.PlaceFullScan(m_scans, Parameters);
+
+                    while (UserDefinedScans.Count > 0)
+                    {
+                        var x = UserDefinedScans.Dequeue();
+                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+                    }
                 }
 
             }
@@ -1030,7 +1030,7 @@ namespace MetaLive
             var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
             //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || p.ExistedExperimentPeak.Count() >=6) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
-            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
+            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
             int topN = Parameters.MS1IonSelecting.TopN;
             //if (IsBoxCarScan(scan))
             //{
@@ -1063,6 +1063,7 @@ namespace MetaLive
                         var storedScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
                         storedScan.Mz = iso.ExperimentIsoEnvelop.First().Mz;
                         UserDefinedScans.Enqueue(storedScan);
+                        storeScanCount++;
                     }
                     else
                     {

@@ -332,6 +332,11 @@ namespace UnitTest
                  PartnerMassDiff = 4.0251,                 
             };
 
+            var spectrum_test = new MzSpectrumXY(scans.Where(p=>p.OneBasedScanNumber == 19467).First().MassSpectrum.XArray, scans.Where(p => p.OneBasedScanNumber == 19467).First().MassSpectrum.YArray, true);
+            var iso_test = IsoDecon.MsDeconv_Deconvolute(spectrum_test, spectrum_test.Range, deconvolutionParameter).ToList();
+            var iso_filter = iso_test.Where(p => p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) || !p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p => p.MsDeconvScore).ToList();
+
+
             Tuple<int, double, long, long, long, long>[] watches = new Tuple<int, double, long, long, long, long>[scans.Length];
 
             for (int i = 0; i < scans.Length; i++)
@@ -344,6 +349,7 @@ namespace UnitTest
                 Stopwatch stopwatch_iso = new Stopwatch();
                 stopwatch_iso.Start();
                 var iso = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, deconvolutionParameter);
+
                 var test1 = iso.ToList();
                 stopwatch_iso.Stop();
 
