@@ -31,9 +31,25 @@ namespace UnitTest
         }
 
         [Test]
-        public static void gammaDistribution()
+        public static void test_StaticBoxCar()
         {
-            var test = MathNet.Numerics.Distributions.Gamma.PDF(1,1,1);
+            Parameters parameters = new Parameters();
+            parameters.BoxCarScanSetting = new BoxCarScanSetting()
+            {
+                BoxCarScans = 2,
+                BoxCarBoxes = 12,
+                BoxCarMzRangeLowBound = 400.0,
+                BoxCarMzRangeHighBound = 1600,
+                BoxCarOverlap = 2
+            };
+
+            var gammaSep = BoxCarScan.GammaDistributionSeparation(parameters);
+            var staticBoxCars = BoxCarScan.GenerateStaticBoxes(gammaSep, parameters.BoxCarScanSetting.BoxCarScans);
+            BoxCarScan.BuildStaticBoxString(parameters);
+
+            var test = BoxCarScan.StaticBoxCarScanRanges;
+
+            Assert.AreEqual(test[1], "[(434.64,473.20),(502.56,539.25),(567.67,604.10),(632.80,669.97),(699.83,738.60),(770.48,811.73),(846.62,891.47),(930.65,980.65),(1026.06,1083.64),(1138.43,1207.86),(1278.01,1368.09),(1467.44,1600.00)]");
         }
 
         [Test]

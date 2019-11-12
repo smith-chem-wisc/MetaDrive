@@ -989,7 +989,7 @@ namespace MetaLive
 
         #endregion
 
-        #region NeuCode WorkFlow
+        #region Partner/NeuCode WorkFlow
 
         private void AddScanIntoQueue_Partner(IMsScan scan)
         {
@@ -1000,20 +1000,14 @@ namespace MetaLive
                 {
                     Console.WriteLine("MS1 Scan arrived Partner.");
 
-                    DeconvoluteFindPartners(scan);
-
-                    //if (!IsBoxCarScan(scan))
-                    //{
-                        
-                    //}
-
-                    FullScan.PlaceFullScan(m_scans, Parameters);
-
-                    while (UserDefinedScans.Count > 0)
+                    if (Parameters.BoxCarScanSetting.DoDbcForMS1)
                     {
-                        var x = UserDefinedScans.Dequeue();
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+                        DeconvoluteFindPartners_StaticBoxCar(scan);
                     }
+                    else
+                    {
+                        DeconvoluteFindPartners(scan);
+                    }                  
                 }
 
             }
@@ -1030,14 +1024,9 @@ namespace MetaLive
 
             var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
 
-            //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || p.ExistedExperimentPeak.Count() >=6) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
-            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
+            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || (!p.HasPartner && p.ExistedExperimentPeak.Count() >=6)) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
+            //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
             int topN = Parameters.MS1IonSelecting.TopN;
-            //if (IsBoxCarScan(scan))
-            //{
-            //    //Because we place two BoxCar Scan. We May don't want to place too many MS2 scans Based on BoxCar Scan. 
-            //    topN = Parameters.MS1IonSelecting.TopN / 2;
-            //}
 
             var placeScanCount = 0;
             var storeScanCount = 0;
@@ -1074,12 +1063,94 @@ namespace MetaLive
                 }
             }
 
-            //if (!IsBoxCarScan(scan) && Parameters.BoxCarScanSetting.DoDbcForMS1 && placeScanCount <= 5)
-            //{
-            //    //Here place two static BoxCar scan
-            //    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
-            //}
 
+            FullScan.PlaceFullScan(m_scans, Parameters);
+
+
+            while (UserDefinedScans.Count > 0)
+            {
+                var x = UserDefinedScans.Dequeue();
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+            }
+        }
+
+        private void DeconvoluteFindPartners_StaticBoxCar(IMsScan scan)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Partner Start", DateTime.Now);
+
+            var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+
+            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || (!p.HasPartner && p.ExistedExperimentPeak.Count() >= 6)) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
+            //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
+            int topN = Parameters.MS1IonSelecting.TopN;
+
+            if (IsBoxCarScan(scan))
+            {
+                BoxCarScanNum++;
+                //Because we place two BoxCar Scan. We May don't want to place too many MS2 scans Based on BoxCar Scan. 
+                topN = Parameters.MS1IonSelecting.TopN / 2;
+            }
+
+            var placeScanCount = 0;
+            var storeScanCount = 0;
+
+            foreach (var iso in isoEnvelops)
+            {
+                if (placeScanCount >= topN)
+                {
+                    break;
+                }
+
+                if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                {
+
+                    var dataTime = DateTime.Now;
+                    lock (lockerExclude)
+                    {
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
+                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
+                    }
+
+                    if (storeScanCount == 0)
+                    {
+                        var storedScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
+                        storedScan.Mz = iso.ExperimentIsoEnvelop.First().Mz;
+                        UserDefinedScans.Enqueue(storedScan);
+                        storeScanCount++;
+                    }
+                    else
+                    {
+                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);
+                    }
+                    placeScanCount++;
+                }
+            }
+
+            if (IsBoxCarScan(scan))
+            {
+                if (BoxCarScanNum == Parameters.BoxCarScanSetting.BoxCarScans)
+                {
+                    FullScan.PlaceFullScan(m_scans, Parameters);
+                    BoxCarScanNum = 0;
+                }
+            }
+            else
+            {
+                if (placeScanCount < 5)
+                {
+                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
+                }
+                else
+                {
+                    FullScan.PlaceFullScan(m_scans, Parameters);
+                }
+            }
+
+            while (UserDefinedScans.Count > 0)
+            {
+                var x = UserDefinedScans.Dequeue();
+                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
+            }
         }
 
         #endregion

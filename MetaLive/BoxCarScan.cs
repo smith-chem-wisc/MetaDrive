@@ -10,16 +10,9 @@ namespace MetaLive
 {
     public class BoxCarScan
     {
-        //public static string[] StaticBoxCar_2_12_Scan = new string[2]
-        //{ "[(400, 423.2), (441.2, 459.9), (476.3, 494.3), (510.3, 528.8), (545, 563.8), (580.8, 600.3), (618.4, 639.8), " +
-        //        "(660.3, 684.3), (708.3, 735.4), (764.4, 799.9),(837.9, 885.4), (945, 1032)]",
-        //"[(422.2,442.2), (458.9,477.3), (493.3,511.3), (527.8,546), (562.8,581.8), (599.3, 619.4), (638.8, 661.3), " +
-        //        "(683.3, 709.3), (734.4, 765.4), (798.9, 838.9), (884.4, 946), (1031, 1200)]"
-        //};
-
-        public static string[] StaticBoxCar_2_12_Scan { get; set; }
-        public static string StaticBoxCarDynamicTargets { get; set; }
-        public static string StaticBoxCarDynamicMaxIts { get; set; }
+        public static string[] StaticBoxCarScanRanges { get; set; }
+        public static string StaticBoxCarScanTargets { get; set; }
+        public static string StaticBoxCarScanMaxIts { get; set; }
 
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters)
         {
@@ -47,33 +40,21 @@ namespace MetaLive
             scan.Values["AGC_Target"] = parameters.BoxCarScanSetting.BoxCarAgcTarget.ToString();
             scan.Values["AGC_Mode"] = parameters.GeneralSetting.AGC_Mode.ToString();
 
-            scan.Values["MsxInjectTargets"] = StaticBoxCarDynamicTargets;
-            scan.Values["MsxInjectMaxITs"] = StaticBoxCarDynamicMaxIts;
+            scan.Values["MsxInjectTargets"] = StaticBoxCarScanTargets;
+            scan.Values["MsxInjectMaxITs"] = StaticBoxCarScanMaxIts;
             scan.Values["MsxInjectNCEs"] = "[]";
             scan.Values["MsxInjectDirectCEs"] = "[]";
             for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
             {               
-                scan.Values["MsxInjectRanges"] = StaticBoxCar_2_12_Scan[i];
+                scan.Values["MsxInjectRanges"] = StaticBoxCarScanRanges[i];
               
                 Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
                 m_scans.SetCustomScan(scan);
             }
         }
 
-        public static Tuple<double, double, double>[] GenerateBoxes(List<double> mzs)
-        {
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[(mzs.Count-1)/2];
-
-            for (int i = 0; i < (mzs.Count - 1)/ 2; i++)
-            {
-                ranges[i] = new Tuple<double, double, double>(mzs[i*2 ], mzs[i*2 +1], mzs[i*2] - mzs[i*2+1]);
-            }
-
-            return ranges;
-        }
-
         //gamma distribution is used to mimic the distribution of intensities.
-        private static List<double> GammaDistributionSeparation(Parameters parameters)
+        public static List<double> GammaDistributionSeparation(Parameters parameters)
         {
             var alpha = 2;
             var beta = 3;
@@ -82,15 +63,16 @@ namespace MetaLive
             var end = 0.9;
 
             List<double> sep = new List<double>();
-            for (int i = 0; i < 25; i++)
+            int totalSep = parameters.BoxCarScanSetting.BoxCarBoxes * parameters.BoxCarScanSetting.BoxCarScans + 1;
+            for (int i = 0; i < totalSep; i++)
             {
-                var p = start + (end - start) / 24 * i;
+                var p = start + (end - start) / (totalSep - 1) * i;
                 var sepx = MathNet.Numerics.Distributions.Gamma.InvCDF(alpha, beta, p);
                 sep.Add(sepx);
             }
 
-            var firstMass = 400.0;
-            var lastMass = 1600.0;
+            var firstMass = parameters.BoxCarScanSetting.BoxCarMzRangeLowBound;
+            var lastMass = parameters.BoxCarScanSetting.BoxCarMzRangeHighBound;
             var scale = lastMass - firstMass;
 
             List<double> scale_sep = new List<double>();
@@ -103,17 +85,92 @@ namespace MetaLive
             return scale_sep;
         }
 
-        public static void GetStaticBox(Parameters parameters, List<double> mzs)
+        public static Tuple<double, double, double>[][] GenerateStaticBoxes(List<double> mzs, int NumOfBoxScan)
+        {
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count - 1];
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i-1] = new Tuple<double, double, double>(mzs[i-1], mzs[i], mzs[i] - mzs[i-1]);
+            }
+            
+            Tuple<double, double, double>[][] rangeArray = new Tuple<double, double, double>[NumOfBoxScan][];
+
+            for (int i = 0; i < NumOfBoxScan; i++)
+            {
+                rangeArray[i] = new Tuple<double, double, double>[(mzs.Count - 1)/NumOfBoxScan];
+                for (int j = 0; j < (mzs.Count - 1) / NumOfBoxScan; j++)
+                {
+                    rangeArray[i][j] = ranges[j * NumOfBoxScan + i];
+                }
+            }
+
+            return rangeArray;
+        }
+
+        public static string GenerateStaticBoxString(Parameters parameters, Tuple<double, double, double>[] dynamicBox, out string dynamicBoxTargets, out string dynamicBoxMaxITs)
+        {
+            string dynamicBoxRanges = "[";
+
+            var overlap = parameters.BoxCarScanSetting.BoxCarOverlap;
+
+            foreach (var box in dynamicBox)
+            {
+                dynamicBoxRanges += "(";
+                dynamicBoxRanges += (box.Item1 - overlap).ToString("0.00");
+                dynamicBoxRanges += ",";
+                dynamicBoxRanges += (box.Item2 + overlap).ToString("0.00");
+                dynamicBoxRanges += "),";
+            }
+
+            dynamicBoxRanges = dynamicBoxRanges.Remove(dynamicBoxRanges.Count() - 1);
+            dynamicBoxRanges += "]";
+
+
+            //Boxtargets and BoxMaxITs
+            dynamicBoxTargets = "[";
+            for (int i = 0; i < dynamicBox.Length; i++)
+            {
+                dynamicBoxTargets += parameters.BoxCarScanSetting.BoxCarAgcTarget / dynamicBox.Length;
+                if (i != dynamicBox.Length - 1)
+                {
+                    dynamicBoxTargets += ",";
+                }
+            }
+            dynamicBoxTargets += "]";
+
+            dynamicBoxMaxITs = "[";
+            for (int i = 0; i < dynamicBox.Length; i++)
+            {
+                dynamicBoxMaxITs += parameters.BoxCarScanSetting.BoxCarMaxInjectTimeInMillisecond / dynamicBox.Length;
+                if (i != dynamicBox.Length - 1)
+                {
+                    dynamicBoxMaxITs += ",";
+                }
+            }
+            dynamicBoxMaxITs += "]";
+
+            return dynamicBoxRanges;
+        }
+
+        public static void BuildStaticBoxString(Parameters parameters)
         {
             string dynamicTargets;
             string dynamicMaxIts;
-            StaticBoxCar_2_12_Scan = new string[2];
-            for (int i = 0; i < 2; i++)
+
+            var mzs = GammaDistributionSeparation(parameters);
+            //To correct the range shift by GenerateStaticBoxString
+            mzs[0] = mzs.First() + parameters.BoxCarScanSetting.BoxCarOverlap;
+            mzs[mzs.Count-1] = mzs.Last() - parameters.BoxCarScanSetting.BoxCarOverlap;
+
+            var staticBoxes = GenerateStaticBoxes(mzs, parameters.BoxCarScanSetting.BoxCarScans);
+
+            StaticBoxCarScanRanges = new string[parameters.BoxCarScanSetting.BoxCarScans];
+            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
             {
-                var staticBoxes = GenerateBoxes(mzs);
-                StaticBoxCar_2_12_Scan[i] = BuildDynamicBoxString(parameters, staticBoxes, out dynamicTargets, out dynamicMaxIts);
-                StaticBoxCarDynamicTargets = dynamicTargets;
-                StaticBoxCarDynamicMaxIts = dynamicMaxIts;
+                StaticBoxCarScanRanges[i] = GenerateStaticBoxString(parameters, staticBoxes[i], out dynamicTargets, out dynamicMaxIts);
+                StaticBoxCarScanTargets = dynamicTargets;
+                StaticBoxCarScanMaxIts = dynamicMaxIts;
             }
         }
 
@@ -173,7 +230,7 @@ namespace MetaLive
                 dynamicBoxRanges += "),";
             }
 
-            dynamicBoxRanges.Remove(0, dynamicBoxRanges.Count()-1);
+            dynamicBoxRanges = dynamicBoxRanges.Remove(dynamicBoxRanges.Count()-1);
             dynamicBoxRanges += "]";
 
 

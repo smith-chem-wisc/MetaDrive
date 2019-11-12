@@ -29,9 +29,11 @@ namespace MetaLive
             {
                 path = args[0];
             }
+
             Parameters parameters = AddParametersFromFile(path);
 
-            
+            //Generate Static BoxCarScan Properties.
+            BoxCarScan.BuildStaticBoxString(parameters);
 
             //Start the task
             if (parameters.GeneralSetting.TestMod)
