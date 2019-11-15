@@ -247,7 +247,7 @@ namespace UnitTest
         public static void Test_ChargeDeconvFile()
         {
             //string FilepathMZML = "E:\\MassData\\20190912_TD_yeast_DBC\\20190912_Yeast7_DBC_FullScanFirst_T3_TopDown.mzML";
-            string FilepathMZML = "E:\\MassData\\20191009_F4\\20191009_J1-F4_DDA4.mzML";
+            string FilepathMZML = "E:\\MassData\\20191009_TD_F4\\20191009_J1-F4_DDA4.mzML";
             MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
             var scans = file.GetAllScansList().Where(p=>p.MsnOrder == 1).ToArray();         
 
@@ -376,6 +376,34 @@ namespace UnitTest
                     output.WriteLine(theEvaluation.Item1.ToString() + "\t" + theEvaluation.Item2 + "\t" + theEvaluation.Item3.ToString() + "\t" + theEvaluation.Item4.ToString() + "\t" + theEvaluation.Item5 + "\t" + +theEvaluation.Item6);
                 }
             }
+        }
+
+
+        [Test]
+        public static void TestIntervals()
+        {
+            string FilepathMZML = "E:\\MassData\\20191107_QXL\\20191107_StdMix_DSSd0d4_postmix1to1.mzML";
+            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
+            var scans = file.GetAllScansList().Where(p => p.MsnOrder == 1).ToArray();
+
+
+            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter
+            {
+                DeconvolutionMinAssumedChargeState = 2,
+                DeconvolutionMaxAssumedChargeState = 8,
+                ToGetPartner = true,
+                PartnerMassDiff = 4.0251,
+            };
+
+
+            var spectrum_test = new MzSpectrumXY(scans.Where(p => p.OneBasedScanNumber == 14995).First().MassSpectrum.XArray, scans.Where(p => p.OneBasedScanNumber == 14995).First().MassSpectrum.YArray, true);
+            var iso_test = IsoDecon.MsDeconv_Deconvolute(spectrum_test, spectrum_test.Range, deconvolutionParameter).ToList();
+
+            var iso_filter = iso_test.Where(p => p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) || !p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p => p.MsDeconvScore).ToList();
+
+            var tuples = IsoDecon.GenerateIntervals(iso_test);
+            Assert.AreEqual(tuples.Count(), 5);
+
         }
 
     }

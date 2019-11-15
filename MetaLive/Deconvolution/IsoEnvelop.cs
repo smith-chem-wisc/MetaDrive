@@ -1,6 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Chemistry;
+using System;
+using System.Collections;
+
 namespace MassSpectrometry
 {
     public class IsoEnvelop
@@ -17,6 +20,14 @@ namespace MassSpectrometry
         }
 
         public MzPeak[] ExperimentIsoEnvelop { get; set; }
+
+        public double MostIntensePeak
+        {
+            get
+            {
+                return ExperimentIsoEnvelop.First().Mz;
+            }
+        }
 
         public MzPeak[] TheoIsoEnvelop { get; set; }
 
@@ -57,6 +68,7 @@ namespace MassSpectrometry
         public double MsDeconvSignificance { get; set; }
 
         public int ScanNum { get; set; }
+
         public double RT { get; set; }
 
         //For NeuCode Feature
@@ -65,6 +77,15 @@ namespace MassSpectrometry
         public bool IsLight { get; set; } = false;
 
         public IsoEnvelop Partner { get; set; }
+
+        public bool Overlap(IsoEnvelop other)
+        {
+            if (this.ExistedExperimentPeak.Select(p => p.Mz).Intersect(other.ExistedExperimentPeak.Select(p => p.Mz)).Count() > 0)
+            {
+                return true;
+            }
+            return false;
+        }
 
     }
 }
