@@ -21,7 +21,7 @@ namespace MetaLive
             //Initiate Element
             Loaders.LoadElements();
             //Loading avagine model for Deconvolution
-            var test = new MzSpectrumBU(new double[]{ 1}, new double[] { 1 }, true);
+            var test = new MzSpectrumXY(new double[]{ 1}, new double[] { 1 }, true);
 
             //Load parameters
             string path="";

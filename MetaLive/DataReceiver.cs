@@ -67,7 +67,6 @@ namespace MetaLive
         internal DataReceiver(Parameters parameters)
         {
             Parameters = parameters;
-            UserDefinedScans = new Queue<UserDefinedScan>();
             DynamicExclusionList = new DynamicExclusionList();
 
             switch (Parameters.GeneralSetting.MethodType)
@@ -89,15 +88,6 @@ namespace MetaLive
                     AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxCar_TD;
                     Console.WriteLine("AddScanIntoQueueAction = DynamicBoxCar_TD.");
                     break;
-                case MethodTypes.GlycoFeature:
-                    IsotopesForGlycoFeature = new IsotopesForGlycoFeature();
-                    AddScanIntoQueueAction = AddScanIntoQueue_Glyco;
-                    Console.WriteLine("AddScanIntoQueueAction = Glyco.");
-                    break;
-                case MethodTypes.Partner:
-                    AddScanIntoQueueAction = AddScanIntoQueue_Partner;
-                    Console.WriteLine("AddScanIntoQueueAction = NeuCode.");
-                    break;
                 case MethodTypes.UserDefined:
                     AddScanIntoQueueAction = AddScanIntoQueue_UserDefined;
                     Console.WriteLine("AddScanIntoQueueAction = UserDefined.");
@@ -108,12 +98,10 @@ namespace MetaLive
         }
 
         Parameters Parameters { get; set; }
-        Queue<UserDefinedScan> UserDefinedScans { get; set; }
         public Action<IMsScan> AddScanIntoQueueAction { get; set; }
 
         DynamicExclusionList DynamicExclusionList { get; set; }
         DynamicDBCExclusionList DynamicDBCExclusionList { get; set; }
-        IsotopesForGlycoFeature IsotopesForGlycoFeature { get; set; } 
 
 
         #region TakeOver
@@ -189,14 +177,6 @@ namespace MetaLive
             //childThreadPlaceScan.Start();
             //Console.WriteLine("Start Thread for Place Scan!");
 
-            if (Parameters.GeneralSetting.MethodType == MethodTypes.GlycoFeature)
-            {
-                Thread childThreadGlycoInclusionList = new Thread(IsotopesForGlycoFeatureDeque);
-                childThreadGlycoInclusionList.IsBackground = true;
-                childThreadGlycoInclusionList.Start();
-                Console.WriteLine("Start Thread for glyco Inclusion list!");
-            }
-
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{
                 using (m_scans = instrument.Control.GetScans(false))
@@ -267,62 +247,6 @@ namespace MetaLive
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream closed (end of method)");            
         }	   
-
-        private void PlaceScan()
-        {
-            try
-            {
-                //TO DO: should I use spining or blocking
-                while (placeUserDefinedScan)
-                {
-                    Thread.Sleep(10); //TO DO: How to control the Thread
-
-                    //Console.WriteLine("Check the UserDefinedScans.");
-
-                    lock (lockerScan)
-                    {
-                        if (UserDefinedScans.Count > 0)
-                        {
-                            var x = UserDefinedScans.Dequeue();
-                            {
-                                switch (x.UserDefinedScanType)
-                                {
-                                    case UserDefinedScanType.FullScan:
-                                        FullScan.PlaceFullScan(m_scans, Parameters);
-                                        break;
-                                    case UserDefinedScanType.DataDependentScan:
-                                        if (x.dynamicBox.Count!=0)
-                                        {
-                                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.dynamicBox);
-                                        }
-                                        else
-                                        {
-                                            DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
-                                        }
-                                        break;
-                                    case UserDefinedScanType.BoxCarScan:
-                                        if (Parameters.GeneralSetting.MethodType == MethodTypes.StaticBoxCar)
-                                        {
-                                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-
-                            }
-                        } 
-                       
-                    }
-                }
-            }
-
-            catch (Exception e)
-            {
-                Console.WriteLine("PlaceScan Exception!");
-                Console.WriteLine(e.ToString() + " " + e.Source);
-            }
-        }
 
         private void CheckTime()
         {
@@ -444,7 +368,7 @@ namespace MetaLive
 
                     lock (lockerScan)
                     {
-                        UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
+                        FullScan.PlaceFullScan(m_scans, Parameters);
                     }
                 }
             }
@@ -455,102 +379,45 @@ namespace MetaLive
             }
         }
 
-        private void AddIsotopicEnvelope2UserDefinedScans(NeuCodeIsotopicEnvelop iso, ref int theTopN)
-        {
-            lock (lockerExclude)
-            {
-                if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                {
-                    var dataTime = DateTime.Now;
-                    DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
-                    Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-
-                    var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                    //TO DO: get the best Mz.
-                    theScan.Mz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
-                    lock (lockerScan)
-                    {
-                        UserDefinedScans.Enqueue(theScan);
-                        Console.WriteLine("dataDependentScans increased.");
-                    }
-                    theTopN++;
-                }
-            }
-        }
-
-        private void DeconvoluteMS1ScanAddMS2Scan(IMsScan scan)
-        {
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
-
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
-
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum", DateTime.Now);
-
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, Parameters.DeconvolutionParameter);
-
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished", DateTime.Now, IsotopicEnvelopes.Count());
-
-            IsotopicEnvelopes = IsotopicEnvelopes.OrderByDescending(p => p.totalIntensity).ToArray();
-
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute order by intensity", DateTime.Now, IsotopicEnvelopes.Count());
-
-            if (IsotopicEnvelopes.Count() > 0)
-            {
-                int topN = 0;
-                foreach (var iso in IsotopicEnvelopes)
-                {
-                    if (topN >= Parameters.MS1IonSelecting.TopN)
-                    {
-                        break;
-                    }
-                    AddIsotopicEnvelope2UserDefinedScans(iso, ref topN);
-                }
-            }
-
-        }
-
-        private int DeconvolutePeakByIntensity(MzSpectrumBU spectrum, IEnumerable<int> indexByY, HashSet<double> seenPeaks, int topN)
-        {
-            int theTopN = 0;
-            foreach (var peakIndex in indexByY)
-            {
-                if (theTopN >= topN)
-                {
-                    break;
-                }
-
-                if (seenPeaks.Contains(spectrum.XArray[peakIndex]))
-                {
-                    continue;
-                }
-                var iso = spectrum.DeconvolutePeak(peakIndex, Parameters.DeconvolutionParameter);
-                if (iso == null)
-                {
-                    continue;
-                }
-                foreach (var seenPeak in iso.peaks.Select(b => b.mz))
-                {
-                    seenPeaks.Add(seenPeak);
-                }
-
-                AddIsotopicEnvelope2UserDefinedScans(iso, ref theTopN);
-            }
-            return theTopN;
-        }
-
-        //This deconvolution only deconvolute TopN peaks to generate MS2 scans. Deconvolute one peak, add one MS2 scan. 
+        //It is possible to deconvolution only deconvolute TopN peaks to generate MS2 scans. Deconvolute one peak, add one MS2 scan. 
         //There is no need to wait to deconvolute all peaks and then add all MS2 scans. 
-        //In theory, this should reduce the time for deconvolute all peaks.
         private void DeconvoluteMS1ScanAddMS2Scan_TopN(IMsScan scan)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-            HashSet<double> seenPeaks = new HashSet<double>();
-            var indexByY = spectrum.ExtractIndicesByY();
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            List<IsoEnvelop> isoEnvelops = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, Parameters.DeconvolutionParameter);
 
-            DeconvolutePeakByIntensity(spectrum, indexByY, seenPeaks, Parameters.MS1IonSelecting.TopN);
+            PlaceBU_MS2Scan(scan, isoEnvelops);
+        }
+
+        private void PlaceBU_MS2Scan(IMsScan scan, List<IsoEnvelop> isoEnvelops)
+        {
+            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
+
+            int placeScanCount = 0;
+
+            foreach (var iso in isoEnvelops)
+            {
+                if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
+                {
+                    break;
+                }
+
+                if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
+                {
+                    var dataTime = DateTime.Now;
+                    lock (lockerExclude)
+                    {
+                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
+                        Console.WriteLine("2 ExclusionList Enqueue: {0}", iso.ExperimentIsoEnvelop.First().Mz);
+                    }
+
+                    DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);
+                    placeScanCount++;
+                }
+
+            }
         }
 
 
@@ -586,8 +453,8 @@ namespace MetaLive
                     {
                         lock (lockerScan)
                         {
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-                            UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.BoxCarScan));
+                            FullScan.PlaceFullScan(m_scans, Parameters);
+                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
                         }
                         BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
                     }
@@ -859,355 +726,6 @@ namespace MetaLive
                     placeScanCount++;
                 }
 
-            }
-        }
-
-        #endregion
-
-        #region Glyco WorkFlow
-
-        private void IsotopesForGlycoFeatureDeque()
-        {
-            try
-            {
-                //TO DO: should I use spining or blocking
-                while (glycoInclude)
-                {
-                    Thread.Sleep(300);
-
-                    DateTime dateTime = DateTime.Now;
-
-                    lock (lockerGlyco)
-                    {
-                        bool toDeque = true;
-
-                        while (toDeque && IsotopesForGlycoFeature.isotopeList.Count > 0)
-                        {
-                            if (dateTime.Subtract(IsotopesForGlycoFeature.isotopeList.Peek().Item2).TotalMilliseconds < Parameters.MS1IonSelecting.ExclusionDuration * 1000)
-                            {
-                                Console.WriteLine("The glyco isotopeList is OK. Now: {0:HH:mm:ss,fff}, Peek: {1:HH:mm:ss,fff}.", dateTime, IsotopesForGlycoFeature.isotopeList.Peek().Item2);
-                                toDeque = false;
-                            }
-                            else
-                            {
-
-                                IsotopesForGlycoFeature.isotopeList.Dequeue();
-                                Console.WriteLine("{0:HH:mm:ss,fff} Glyco isotopeList Dequeue: {1}", dateTime, IsotopesForGlycoFeature.isotopeList.Count);
-
-                            }
-                        }
-
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Glyco isotopeList Exception!");
-                Console.WriteLine(e.ToString() + " " + e.Source);
-            }
-        }
-
-        private void AddScanIntoQueue_Glyco(IMsScan scan)
-        {
-            try
-            {
-                //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                {
-                    string scanNumber;
-                    scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
-                    Console.WriteLine("MS1 Scan {0} arrived.", scanNumber);
-
-                    DeconvoluteFindGlycoFeatures(scan);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("AddScanIntoQueue_BottomUp Exception!");
-                Console.WriteLine(e.ToString() + " " + e.Source);
-            }
-        }
-
-        private List<NeuCodeIsotopicEnvelop> DeconvolutePeakConstructGlycoFamily(MzSpectrumBU spectrum)
-        {
-            //TO THINK: improve deconvolution is the key for everything!
-            var IsotopicEnvelopes = spectrum.Deconvolute(spectrum.Range, Parameters.DeconvolutionParameter).OrderByDescending(p => p.totalIntensity).Take(100);
-
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} isotopenvelops", DateTime.Now, IsotopicEnvelopes.Count());
-
-            NeuCodeIsotopicEnvelop[] allIsotops;
-
-            lock (lockerGlyco)
-            {
-                var dateTime = DateTime.Now;
-
-                IsotopesForGlycoFeature.AddIsotopeIntoList(IsotopicEnvelopes, dateTime);
-
-                allIsotops = IsotopesForGlycoFeature.isotopeList.Where(p => !p.Item1.AlreadyExist).Select(p => p.Item1).OrderBy(p => p.monoisotopicMass).ToArray();
-            }
-
-            var allFeatures = FeatureFinder.ExtractGlycoMS1features(allIsotops).OrderByDescending(P => P.MatchedFamilyCount);
-
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Finished, get {1} features.", DateTime.Now, allFeatures.Count());
-
-            List<NeuCodeIsotopicEnvelop> glycoIsotope = new List<NeuCodeIsotopicEnvelop>();
-
-            int addedGlycoFeature = 0;
-            if (allFeatures.Count() > 0)
-            {
-                foreach (var iso in allFeatures)
-                {
-                    if (addedGlycoFeature >= Parameters.GlycoSetting.TopN)
-                    {
-                        break;
-                    }
-
-                    lock (lockerExclude)
-                    {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-                            iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
-                            glycoIsotope.Add(iso);
-                            addedGlycoFeature++;
-                        }
-                    }
-                }
-            }
-
-            if (addedGlycoFeature < 5)
-            {
-                foreach (var iso in IsotopicEnvelopes)
-                {
-                    if (addedGlycoFeature - 5 >= 0)
-                    {
-                        break;
-                    }
-                    lock (lockerExclude)
-                    {
-                        if (DynamicExclusionList.isNotInExclusionList(iso.peaks.OrderBy(p => p.intensity).Last().mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                        {
-                            var dataTime = DateTime.Now;
-                            DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.peaks.OrderBy(p => p.intensity).Last().mz, iso.charge, dataTime));
-                            Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-                            iso.SelectedMz = iso.peaks.OrderBy(p => p.intensity).Last().mz;
-                            glycoIsotope.Add(iso);
-                            addedGlycoFeature++;
-                        }
-                    }
-                }
-            }
-
-            return glycoIsotope;
-        }
-
-        private void DeconvoluteFindGlycoFeatures(IMsScan scan)
-        {
-            var spectrum = new MzSpectrumBU(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), true);
-
-            //Deconvolute whole scan and contrust glycofamily
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Creat spectrum for glycofamily", DateTime.Now);
-            var candidates = DeconvolutePeakConstructGlycoFamily(spectrum);
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Placed {1} Glycofamily scans.", DateTime.Now, candidates);
-
-            int j = 0;
-            while (j <= candidates.Count() - 6)
-            {
-                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                //TO DO: get the best Mz.
-                theScan.Mz = candidates[j].SelectedMz;
-                lock (lockerScan)
-                {
-                    UserDefinedScans.Enqueue(theScan);
-                    Console.WriteLine("dataDependentScans increased.");
-                }
-                j++;
-            }
-            lock (lockerScan)
-            {
-                UserDefinedScans.Enqueue(new UserDefinedScan(UserDefinedScanType.FullScan));
-            }
-            while (j <= candidates.Count() - 1)
-            {
-                var theScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-
-                //TO DO: get the best Mz.
-                theScan.Mz = candidates[j].SelectedMz;
-                lock (lockerScan)
-                {
-                    UserDefinedScans.Enqueue(theScan);
-                    Console.WriteLine("dataDependentScans increased.");
-                }
-                j++;
-            }
-        }
-
-        #endregion
-
-        #region Partner/NeuCode WorkFlow
-
-        private void AddScanIntoQueue_Partner(IMsScan scan)
-        {
-            try
-            {
-                //Is MS1 Scan
-                if (scan.HasCentroidInformation && IsMS1Scan(scan))
-                {
-                    Console.WriteLine("MS1 Scan arrived Partner.");
-
-                    if (Parameters.BoxCarScanSetting.DoDbcForMS1)
-                    {
-                        DeconvoluteFindPartners_StaticBoxCar(scan);
-                    }
-                    else
-                    {
-                        DeconvoluteFindPartners(scan);
-                    }                  
-                }
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("AddScanIntoQueue_Partner Exception!");
-                Console.WriteLine(e.ToString() + " " + e.Source);
-            }
-        }
-
-        private void DeconvoluteFindPartners(IMsScan scan)
-        {
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Partner Start", DateTime.Now);
-
-            var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-
-            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || (!p.HasPartner && p.ExistedExperimentPeak.Count() >=6)) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
-            //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
-            int topN = Parameters.MS1IonSelecting.TopN;
-
-            var placeScanCount = 0;
-            var storeScanCount = 0;
-
-            foreach (var iso in isoEnvelops)
-            {
-                if (placeScanCount >= topN)
-                {
-                    break;
-                }
-
-                if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                {
-
-                    var dataTime = DateTime.Now;
-                    lock (lockerExclude)
-                    {
-                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
-                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-                    }
-
-                    if(storeScanCount == 0)
-                    {
-                        var storedScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                        storedScan.Mz = iso.ExperimentIsoEnvelop.First().Mz;
-                        UserDefinedScans.Enqueue(storedScan);
-                        storeScanCount++;
-                    }
-                    else
-                    {
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);                       
-                    }
-                    placeScanCount++;
-                }
-            }
-
-
-            FullScan.PlaceFullScan(m_scans, Parameters);
-
-
-            while (UserDefinedScans.Count > 0)
-            {
-                var x = UserDefinedScans.Dequeue();
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
-            }
-        }
-
-        private void DeconvoluteFindPartners_StaticBoxCar(IMsScan scan)
-        {
-            Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Partner Start", DateTime.Now);
-
-            var mzSpectrumXY = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-
-            var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p => (p.IsLight || (!p.HasPartner && p.ExistedExperimentPeak.Count() >= 6)) && p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1).OrderByDescending(p => p.MsDeconvScore).ToList();
-            //var isoEnvelops = IsoDecon.MsDeconv_Deconvolute(mzSpectrumXY, mzSpectrumXY.Range, Parameters.DeconvolutionParameter).Where(p =>  p.MsDeconvScore >= 50 && p.MsDeconvSignificance > 0.1 && ((p.HasPartner && p.IsLight) ||!p.HasPartner)).OrderByDescending(p => p.IsLight).ThenByDescending(p =>p.MsDeconvScore).ToList();
-            int topN = Parameters.MS1IonSelecting.TopN;
-
-            if (IsBoxCarScan(scan))
-            {
-                BoxCarScanNum++;
-                //Because we place two BoxCar Scan. We May don't want to place too many MS2 scans Based on BoxCar Scan. 
-                topN = Parameters.MS1IonSelecting.TopN / 2;
-            }
-
-            var placeScanCount = 0;
-            var storeScanCount = 0;
-
-            foreach (var iso in isoEnvelops)
-            {
-                if (placeScanCount >= topN)
-                {
-                    break;
-                }
-
-                if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
-                {
-
-                    var dataTime = DateTime.Now;
-                    lock (lockerExclude)
-                    {
-                        DynamicExclusionList.exclusionList.Enqueue(new Tuple<double, int, DateTime>(iso.ExperimentIsoEnvelop.First().Mz, iso.Charge, dataTime));
-                        Console.WriteLine("ExclusionList Enqueue: {0}", DynamicExclusionList.exclusionList.Count);
-                    }
-
-                    if (storeScanCount == 0)
-                    {
-                        var storedScan = new UserDefinedScan(UserDefinedScanType.DataDependentScan);
-                        storedScan.Mz = iso.ExperimentIsoEnvelop.First().Mz;
-                        UserDefinedScans.Enqueue(storedScan);
-                        storeScanCount++;
-                    }
-                    else
-                    {
-                        DataDependentScan.PlaceMS2Scan(m_scans, Parameters, iso.ExperimentIsoEnvelop.First().Mz);
-                    }
-                    placeScanCount++;
-                }
-            }
-
-            if (IsBoxCarScan(scan))
-            {
-                if (BoxCarScanNum == Parameters.BoxCarScanSetting.BoxCarScans)
-                {
-                    FullScan.PlaceFullScan(m_scans, Parameters);
-                    BoxCarScanNum = 0;
-                }
-            }
-            else
-            {
-                if (placeScanCount < 5)
-                {
-                    BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
-                }
-                else
-                {
-                    FullScan.PlaceFullScan(m_scans, Parameters);
-                }
-            }
-
-            while (UserDefinedScans.Count > 0)
-            {
-                var x = UserDefinedScans.Dequeue();
-                DataDependentScan.PlaceMS2Scan(m_scans, Parameters, x.Mz);
             }
         }
 

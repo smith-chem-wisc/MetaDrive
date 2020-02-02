@@ -50,17 +50,8 @@ MS2MzRangeLowBound = 100
 MS2MzRangeHighBound = 1800
 MS2MicroScans = 1
 
-[GlycoSetting]
-InclusionDuration = 30
-TopN = 15
-
 [DeconvolutionParameter]
 DeconvolutionMinAssumedChargeState = 2
 DeconvolutionMaxAssumedChargeState = 6
 DeconvolutionMassTolerance = 4.0
 DeconvolutionIntensityRatio = 3.0
-ToGetPartner = false
-PartnerMassDiff = 0.018
-MaxmiumLabelNumber = 3
-PartnerPairRatio = 1.0
-ParterMassTolerance = 10.0

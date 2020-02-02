@@ -25,13 +25,6 @@ namespace MassSpectrometry
             const double averageN = 1.3577;
             const double averageS = 0.0417;
 
-            //Glycopeptide Averagine
-            //const double averageC = 10.93;
-            //const double averageH = 15.75;
-            //const double averageO = 6.48;
-            //const double averageN = 1.66;
-            //const double averageS = 0.02;
-
             const double fineRes = 0.125;
             const double minRes = 1e-8;
 
@@ -392,53 +385,8 @@ namespace MassSpectrometry
 
             
             var orderedIsoEnvelops = isoEnvelops.OrderBy(p => p.ExperimentIsoEnvelop.First().Mz).ToList();
-            FindLabelPair(orderedIsoEnvelops, deconvolutionParameter);
 
             return orderedIsoEnvelops;
-        }
-
-        //isoEnvelops should be already ordered by mono mass
-        //TO DO: need to be improved
-        private static void FindLabelPair(List<IsoEnvelop> isoEnvelops, DeconvolutionParameter deconvolutionParameter)
-        {
-            if (!deconvolutionParameter.ToGetPartner)
-            {
-                return;
-            }
-
-            double[] monoMzs = isoEnvelops.Select(p => p.Mz).ToArray();
-
-            foreach (var iso in isoEnvelops)
-            {
-                if (iso.HasPartner)
-                {
-                    continue;
-                }
-
-                for (int i = -1; i <= deconvolutionParameter.MaxmiumLabelNumber; i++)
-                {
-                    //var possiblePairMass = iso.MonoisotopicMass + deconvolutionParameter.PartnerMassDiff * i;
-                    var possiblePairMass = iso.MonoisotopicMass + deconvolutionParameter.PartnerMassDiff + (i-1)* 1.00289;
-                    var possiblePairMz = possiblePairMass.ToMz(iso.Charge);
-
-                    var closestIsoIndex = GetClosestIndexInArray(possiblePairMz, monoMzs);
-
-                    if (isoEnvelops.ElementAt(closestIsoIndex.Value).MonoisotopicMass != iso.MonoisotopicMass
-                        && deconvolutionParameter.PartnerAcceptor.Within(isoEnvelops.ElementAt(closestIsoIndex.Value).MonoisotopicMass, possiblePairMass)
-                        && iso.Charge == isoEnvelops.ElementAt(closestIsoIndex.Value).Charge)
-                    {
-                        var ratio = iso.TotalIntensity / isoEnvelops.ElementAt(closestIsoIndex.Value).TotalIntensity;
-                        if (0.2 <= ratio && ratio <= 5)
-                        {
-                            iso.HasPartner = true;
-                            iso.IsLight = true;
-                            iso.Partner = isoEnvelops.ElementAt(closestIsoIndex.Value);
-                            isoEnvelops.ElementAt(closestIsoIndex.Value).HasPartner = true;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
         private static int? GetClosestIndexInArray(double x, double[] array)

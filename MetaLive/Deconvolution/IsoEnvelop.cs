@@ -71,13 +71,6 @@ namespace MassSpectrometry
 
         public double RT { get; set; }
 
-        //For NeuCode Feature
-        public bool HasPartner { get; set; } = false;
-
-        public bool IsLight { get; set; } = false;
-
-        public IsoEnvelop Partner { get; set; }
-
         public bool Overlap(IsoEnvelop other)
         {
             if (this.ExistedExperimentPeak.Select(p => p.Mz).Intersect(other.ExistedExperimentPeak.Select(p => p.Mz)).Count() > 0)

@@ -152,11 +152,7 @@
     <Compile Include="DataReceiver.cs" />
     <Compile Include="DynamicDBCExclusionList.cs" />
     <Compile Include="DynamicExclusionList.cs" />
-    <Compile Include="FeatureFinder.cs" />
     <Compile Include="FullScan.cs" />
-    <Compile Include="IsotopesForGlycoFeature.cs" />
-    <Compile Include="Deconvolution_old\MzSpectrumBU.cs" />
-    <Compile Include="Deconvolution_old\NeuCodeIsotopicEnvelop.cs" />
     <Compile Include="Parameters.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

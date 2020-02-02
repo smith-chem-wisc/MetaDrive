@@ -214,7 +214,6 @@ namespace MassSpectrometry
             //each charge state
             foreach(var i in allPossibleChargeState)
             {
-                List<int> indexes;
                 List<(int charge, double mz, double intensity, int index)> the_matched_mz_z = GetMzsOfPeakAtCharge(mzSpectrumXY, index, i, deconvolutionParameter);
 
                 if (the_matched_mz_z.Count >= 4 && QuickFilterIsoenvelop(the_matched_mz_z, mzSpectrumXY, deconvolutionParameter))
