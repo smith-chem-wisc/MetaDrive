@@ -8,10 +8,11 @@ namespace MetaLive
     {
         ShotGun = 0,
         StaticBoxCar = 1,
-        DynamicBoxCar = 2,
-        GlycoFeature = 3,
-        Partner = 4,
-        UserDefined = 5
+        DynamicBoxCar_BU = 2,
+        DynamicBoxCar_TD = 3,
+        GlycoFeature = 4,
+        Partner = 5,
+        UserDefined = 6
     }
 
     public class Parameters

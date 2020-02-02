@@ -80,10 +80,14 @@ namespace MetaLive
                     AddScanIntoQueueAction = AddScanIntoQueue_StaticBox;
                     Console.WriteLine("AddScanIntoQueueAction = StaticBox.");
                     break;
-                case MethodTypes.DynamicBoxCar:
+                case MethodTypes.DynamicBoxCar_BU:
+                    AddScanIntoQueueAction = AddScanIntoQueue_BynamicBoxCar_BU;
+                    Console.WriteLine("AddScanIntoQueueAction = DynamicBoxCar_BU.");
+                    break;
+                case MethodTypes.DynamicBoxCar_TD:
                     DynamicDBCExclusionList = new DynamicDBCExclusionList();
-                    AddScanIntoQueueAction = AddScanIntoQueue_DynamicBox;
-                    Console.WriteLine("AddScanIntoQueueAction = DynamicBox.");
+                    AddScanIntoQueueAction = AddScanIntoQueue_DynamicBoxCar_TD;
+                    Console.WriteLine("AddScanIntoQueueAction = DynamicBoxCar_TD.");
                     break;
                 case MethodTypes.GlycoFeature:
                     IsotopesForGlycoFeature = new IsotopesForGlycoFeature();
@@ -165,7 +169,7 @@ namespace MetaLive
             childThreadCheckTime.Start();
             Console.WriteLine("Start Thread for checking time!");
 
-            if (Parameters.GeneralSetting.MethodType == MethodTypes.DynamicBoxCar)
+            if (Parameters.GeneralSetting.MethodType == MethodTypes.DynamicBoxCar_TD)
             {
                 Thread childThreadDBCExclusionList = new Thread(DynamicDBCExclusionListDeque);
                 childThreadDBCExclusionList.IsBackground = true;
@@ -451,7 +455,6 @@ namespace MetaLive
             }
         }
 
-
         private void AddIsotopicEnvelope2UserDefinedScans(NeuCodeIsotopicEnvelop iso, ref int theTopN)
         {
             lock (lockerExclude)
@@ -600,7 +603,62 @@ namespace MetaLive
 
         #endregion
 
-        #region DynamicBox WorkFlow
+        #region DynamicBox_BU WorkFlow
+
+        private void AddScanIntoQueue_BynamicBoxCar_BU(IMsScan scan)
+        {
+            try
+            {
+                //Is MS1 Scan
+                if (scan.HasCentroidInformation && IsMS1Scan(scan))
+                {
+                    bool isBoxCarScan = IsBoxCarScan(scan);
+
+                    //string scanNumber;
+                    //scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
+                    Console.WriteLine("In DynamicBoxCar_BU method, MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
+
+                    if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
+                    {
+                        DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
+                    }
+
+                    if (isBoxCarScan)
+                    {
+                        BoxCarScanNum--;
+                    }
+
+                    if (BoxCarScanNum == 0)
+                    {
+                        lock (lockerScan)
+                        {
+                            FullScan.PlaceFullScan(m_scans, Parameters);
+                            var isoEnvelops = Deconvolute_BU(scan);
+                            var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
+                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
+                        }
+                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("AddScanIntoQueue_DynamicBoxCar_Bu MS2FromFullScan Exception!");
+                Console.WriteLine(e.ToString() + " " + e.Source);
+            }
+        }
+
+        private List<IsoEnvelop> Deconvolute_BU(IMsScan scan)
+        {
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            List<IsoEnvelop> isoEnvelops = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, Parameters.DeconvolutionParameter) ;
+            return isoEnvelops;
+        }
+
+        #endregion
+
+        #region DynamicBox_TD WorkFlow
 
         private void DynamicDBCExclusionListDeque()
         {
@@ -645,7 +703,7 @@ namespace MetaLive
             }
         }
 
-        private void AddScanIntoQueue_DynamicBox(IMsScan scan)
+        private void AddScanIntoQueue_DynamicBoxCar_TD(IMsScan scan)
         {
             try
             {
@@ -654,7 +712,7 @@ namespace MetaLive
                 {           
                     List<ChargeEnvelop> chargeEnvelops;
 
-                    var isoEnvelops = Deconvolute(scan, out chargeEnvelops);
+                    var isoEnvelops = Deconvolute_TD(scan, out chargeEnvelops);
 
                     Console.WriteLine("chargeEnvelops.Count: {0}", isoEnvelops.Count);
 
@@ -662,7 +720,7 @@ namespace MetaLive
                     {
                         if (IsBoxCarScan(scan))
                         {
-                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                            PlaceDynamicBoxCarMS2Scan(scan, chargeEnvelops, isoEnvelops);
                             FullScan.PlaceFullScan(m_scans, Parameters);
                         }
                         else
@@ -696,11 +754,11 @@ namespace MetaLive
                         {
                             FullScan.PlaceFullScan(m_scans, Parameters);
 
-                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                            PlaceDynamicBoxCarMS2Scan(scan, chargeEnvelops, isoEnvelops);
                         }
                         else
                         {
-                            PlaceDynamicBoxScan(scan, chargeEnvelops, isoEnvelops);
+                            PlaceDynamicBoxCarMS2Scan(scan, chargeEnvelops, isoEnvelops);
 
                             FullScan.PlaceFullScan(m_scans, Parameters);
                         }
@@ -716,7 +774,7 @@ namespace MetaLive
             }
         }
 
-        private List<IsoEnvelop> Deconvolute(IMsScan scan, out List<ChargeEnvelop> chargeEnvelops)
+        private List<IsoEnvelop> Deconvolute_TD(IMsScan scan, out List<ChargeEnvelop> chargeEnvelops)
         {
             var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
             List<IsoEnvelop> isoEnvelops;
@@ -724,7 +782,7 @@ namespace MetaLive
             return isoEnvelops;
         }
 
-        private void PlaceDynamicBoxScan(IMsScan scan, List<ChargeEnvelop> chargeEnvelops, List<IsoEnvelop> isoEnvelops)
+        private void PlaceDynamicBoxCarMS2Scan(IMsScan scan, List<ChargeEnvelop> chargeEnvelops, List<IsoEnvelop> isoEnvelops)
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Dynamic BoxCar Start", DateTime.Now);
 
