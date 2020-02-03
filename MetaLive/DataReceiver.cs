@@ -165,17 +165,10 @@ namespace MetaLive
                 Console.WriteLine("Start Thread for DynamicBoxCar (DBC) exclusion list!");
             }
 
-
             Thread childThreadExclusionList = new Thread(DynamicExclusionListDeqeue);
             childThreadExclusionList.IsBackground = true;
             childThreadExclusionList.Start();
             Console.WriteLine("Start Thread for exclusion list!");
-
-
-            //Thread childThreadPlaceScan = new Thread(PlaceScan);
-            //childThreadPlaceScan.IsBackground = true;
-            //childThreadPlaceScan.Start();
-            //Console.WriteLine("Start Thread for Place Scan!");
 
             using (IExactiveInstrumentAccess instrument = Connection.GetFirstInstrument())
 			{

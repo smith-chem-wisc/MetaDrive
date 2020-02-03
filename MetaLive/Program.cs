@@ -30,6 +30,9 @@ namespace MetaLive
                 path = args[0];
             }
 
+            //Quick way to check parameters
+            //path = "G:\\Parameters\\Parameters_DynamicBox_BU.toml";
+
             Parameters parameters = AddParametersFromFile(path);
 
             //Generate Static BoxCarScan Properties.
