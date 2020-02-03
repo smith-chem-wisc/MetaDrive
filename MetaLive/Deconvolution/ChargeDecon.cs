@@ -37,16 +37,6 @@ namespace MassSpectrometry
             return index - 1;
         }
 
-        public static double[] GenerateRuler()
-        {
-            List<double> chargeDiff = new List<double>();
-            for (int i = 1; i <= 60; i++)
-            {
-                chargeDiff.Add(Math.Log(i));
-            }
-            return chargeDiff.ToArray();
-        }
-
         //Dictinary<charge, mz>
         public static Dictionary<int, double> GenerateMzs(double monomass, double low, double high)
         {
@@ -442,23 +432,6 @@ namespace MassSpectrometry
             return chargeEnvelops;
         }
 
-        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
-        public static Tuple<double, double, double>[] GenerateBoxes(List<IsoEnvelop> isoEnvelops)
-        {
-            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
-            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
-
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
-
-            for (int i = 1; i < mzs.Count; i++)
-            {
-                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
-            }
-            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
-
-            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
-
-        }
 
     }
 }

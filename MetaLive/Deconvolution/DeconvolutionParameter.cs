@@ -17,25 +17,11 @@ namespace MassSpectrometry
         public int DeconvolutionMaxAssumedChargeState { get; set; }
         public double DeconvolutionMassTolerance { get; set; }
 
-        public bool ToGetPartner { get; set; }
-        public double PartnerMassDiff { get; set; }
-        public int MaxmiumLabelNumber { get; set; }
-        public double PartnerPairRatio { get; set; }
-        public double ParterMassTolerance { get; set; }
-
         public Tolerance DeconvolutionAcceptor
         {
             get
             {
                 return new PpmTolerance(DeconvolutionMassTolerance);
-            }
-        }
-
-        public Tolerance PartnerAcceptor
-        {
-            get
-            {
-                return new PpmTolerance(ParterMassTolerance);
             }
         }
     }

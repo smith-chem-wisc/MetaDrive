@@ -53,14 +53,12 @@ namespace MetaLive
         bool firstFullScanPlaced = false;
 
         bool dynamicExclude = true;
-        bool glycoInclude = true;
         bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
         bool TimeIsOver = false;
 
         static object lockerExclude = new object();
         static object lockerScan = new object();
-        static object lockerGlyco = new object();
 
         #endregion
 
@@ -102,6 +100,8 @@ namespace MetaLive
 
         DynamicExclusionList DynamicExclusionList { get; set; }
         DynamicDBCExclusionList DynamicDBCExclusionList { get; set; }
+
+        List<Tuple<double, double, double>>[] Boxes { get; set;  }
 
 
         #region TakeOver
@@ -242,7 +242,6 @@ namespace MetaLive
         private void Orbitrap_AcquisitionStreamClosing(object sender, EventArgs e)
 		{
             dynamicExclude = false;
-            glycoInclude = false;
             placeUserDefinedScan = false;
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream closed (end of method)");            
@@ -385,10 +384,16 @@ namespace MetaLive
         {
             Console.WriteLine("\n{0:HH:mm:ss,fff} Deconvolute Start", DateTime.Now);
 
-            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-            List<IsoEnvelop> isoEnvelops = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, Parameters.DeconvolutionParameter);
+            List<IsoEnvelop> isoEnvelops = Deconvolute_BU(scan);
 
             PlaceBU_MS2Scan(scan, isoEnvelops);
+        }
+
+        private List<IsoEnvelop> Deconvolute_BU(IMsScan scan)
+        {
+            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
+            List<IsoEnvelop> isoEnvelops = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, Parameters.DeconvolutionParameter);
+            return isoEnvelops;
         }
 
         private void PlaceBU_MS2Scan(IMsScan scan, List<IsoEnvelop> isoEnvelops)
@@ -397,7 +402,7 @@ namespace MetaLive
 
             int placeScanCount = 0;
 
-            foreach (var iso in isoEnvelops)
+            foreach (var iso in isoEnvelops.OrderByDescending(p=>p.TotalIntensity))
             {
                 if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
                 {
@@ -425,7 +430,7 @@ namespace MetaLive
 
         #region StaticBox WorkFlow
 
-        //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans.
+        //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans for placing MS2 scans.
         private void AddScanIntoQueue_StaticBox(IMsScan scan)
         {
             try
@@ -487,7 +492,12 @@ namespace MetaLive
 
                     if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
                     {
-                        DeconvoluteMS1ScanAddMS2Scan_TopN(scan);
+                        List<IsoEnvelop> isoEnvelops = Deconvolute_BU(scan);
+
+                        Boxes = GenerateBoxes_BU(isoEnvelops, Parameters);
+
+                        PlaceBU_MS2Scan(scan, isoEnvelops);
+
                     }
 
                     if (isBoxCarScan)
@@ -500,9 +510,12 @@ namespace MetaLive
                         lock (lockerScan)
                         {
                             FullScan.PlaceFullScan(m_scans, Parameters);
-                            var isoEnvelops = Deconvolute_BU(scan);
-                            var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
-                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
+
+                            //The nearby Full mass scans in the current DDA method are very similar, so it is possible to use the previous full scan to generate the current boxes.
+                            if (Boxes.Length > 0)
+                            {
+                                BoxCarScan.PlaceBoxCarScan_BU(m_scans, Parameters, Boxes);
+                            }
                         }
                         BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
                     }
@@ -516,11 +529,49 @@ namespace MetaLive
             }
         }
 
-        private List<IsoEnvelop> Deconvolute_BU(IMsScan scan)
+        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
+        public static List<Tuple<double, double, double>>[] GenerateBoxes_BU(List<IsoEnvelop> isoEnvelops, Parameters parameters)
         {
-            var spectrum = new MzSpectrumXY(scan.Centroids.Select(p => p.Mz).ToArray(), scan.Centroids.Select(p => p.Intensity).ToArray(), false);
-            List<IsoEnvelop> isoEnvelops = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, Parameters.DeconvolutionParameter) ;
-            return isoEnvelops;
+            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
+
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+            }
+
+            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), parameters.BoxCarScanSetting.BoxCarMzRangeHighBound, parameters.BoxCarScanSetting.BoxCarMzRangeHighBound - mzs.Last());
+
+            //return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
+
+            List<Tuple<double, double, double>>[] boxes = new List<Tuple<double, double, double>>[parameters.BoxCarScanSetting.BoxCarBoxes];
+
+            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarBoxes; i++)
+            {
+                boxes[i] = new List<Tuple<double, double, double>>();
+            }
+
+            int j = 0;
+            foreach (var r in ranges)
+            {
+                //Make sure the range is longer than 10. 
+                if (r.Item3 > 10)
+                {
+                    if (j <= parameters.BoxCarScanSetting.BoxCarBoxes-1)
+                    {
+                        boxes[j].Add(r);
+                        j++;
+                    }
+                    else
+                    {
+                        j = 0;
+                    }
+                }
+            }
+
+            return boxes;
         }
 
         #endregion
@@ -605,7 +656,7 @@ namespace MetaLive
 
                                 }
 
-                                var boxes = ChargeDecon.GenerateBoxes(isoEnvelops);
+                                var boxes = GenerateBoxes_TD(isoEnvelops);
 
                                 BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
                             }
@@ -727,6 +778,24 @@ namespace MetaLive
                 }
 
             }
+        }
+
+        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
+        public static Tuple<double, double, double>[] GenerateBoxes_TD(List<IsoEnvelop> isoEnvelops)
+        {
+            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
+
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+            }
+            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
+
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
+
         }
 
         #endregion

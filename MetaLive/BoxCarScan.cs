@@ -174,6 +174,14 @@ namespace MetaLive
             }
         }
 
+        public static void PlaceBoxCarScan_BU(IScans m_scans, Parameters parameters, List<Tuple<double, double, double>>[] dynamicBoxs)
+        {
+            foreach (var dynamicBox in dynamicBoxs)
+            {
+                PlaceBoxCarScan(m_scans, parameters, dynamicBox.ToArray());
+            }
+        }
+
         public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)
         {
             if (m_scans.PossibleParameters.Length == 0)
