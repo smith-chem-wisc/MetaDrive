@@ -10,6 +10,7 @@ using System.Threading;
 using System.IO;
 using MathNet;
 using MetaLive;
+using IO.MzML;
 
 namespace UnitTest
 {
@@ -27,7 +28,7 @@ namespace UnitTest
         public static void boxCarRangeTest()
         {
             var Parameters = Program.AddParametersFromFile("");
-            Assert.AreEqual(Parameters.BoxCarScanSetting.BoxCarScans, 2);
+            Assert.AreEqual(Parameters.BoxCarScanSetting.NumberOfBoxCarScans, 2);
         }
 
         [Test]
@@ -36,15 +37,15 @@ namespace UnitTest
             Parameters parameters = new Parameters();
             parameters.BoxCarScanSetting = new BoxCarScanSetting()
             {
-                BoxCarScans = 2,
-                BoxCarBoxes = 12,
+                NumberOfBoxCarScans = 2,
+                NumberOfBoxCarBoxes = 12,
                 BoxCarMzRangeLowBound = 400.0,
                 BoxCarMzRangeHighBound = 1600,
                 BoxCarOverlap = 2
             };
 
             var gammaSep = BoxCarScan.GammaDistributionSeparation(parameters);
-            var staticBoxCars = BoxCarScan.GenerateStaticBoxes(gammaSep, parameters.BoxCarScanSetting.BoxCarScans);
+            var staticBoxCars = BoxCarScan.GenerateStaticBoxes(gammaSep, parameters.BoxCarScanSetting.NumberOfBoxCarScans);
             BoxCarScan.BuildStaticBoxString(parameters);
 
             var test = BoxCarScan.StaticBoxCarScanRanges;
@@ -76,5 +77,21 @@ namespace UnitTest
             var dynamicInclusionForMS2 = DataDependentScan.BuildDynamicBoxInclusionString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
             Assert.AreEqual(dynamicInclusionForMS2, "[(374.300,375.700),(697.460,698.860),(636.790,638.190),(665.730,667.130),(1236.800,1238.200)]");
         }
+
+        [Test]
+        public static  void BU_dynamicBoxCarRange()
+        {
+            string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data/20170802_QEp1_FlMe_SA_BOX0_SILAC_BoxCar_SLICED.mzML");
+            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
+            var scans = file.GetAllScansList();
+
+            var spectrum = new MzSpectrumXY(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+            Parameters parameters = Program.AddParametersFromFile("");
+            var isos = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, parameters.DeconvolutionParameter);
+
+            List<List<Tuple<double, double, double>>> Boxes = new List<List<Tuple<double, double, double>>>();
+            BoxCarScan.GenerateDynamicBoxes_BU(isos, parameters, Boxes);
+        }
+
     }
 }

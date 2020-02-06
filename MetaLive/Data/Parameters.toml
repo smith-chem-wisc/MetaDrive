@@ -7,8 +7,8 @@ SourceCID = 0
 AGC_Mode = 1
 
 [BoxCarScanSetting]
-BoxCarScans = 2
-BoxCarBoxes = 12
+NumberOfBoxCarScans = 2
+NumberOfBoxCarBoxes = 12
 BoxCarOverlap = 1
 BoxCarMaxInjectTimeInMillisecond = 252
 BoxCarResolution = 120000

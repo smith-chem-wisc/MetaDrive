@@ -78,6 +78,7 @@ namespace MetaLive
                     Console.WriteLine("AddScanIntoQueueAction = StaticBox.");
                     break;
                 case MethodTypes.DynamicBoxCar_BU:
+                    Boxes = new List<List<Tuple<double, double, double>>>();
                     AddScanIntoQueueAction = AddScanIntoQueue_BynamicBoxCar_BU;
                     Console.WriteLine("AddScanIntoQueueAction = DynamicBoxCar_BU.");
                     break;
@@ -101,7 +102,7 @@ namespace MetaLive
         DynamicExclusionList DynamicExclusionList { get; set; }
         DynamicDBCExclusionList DynamicDBCExclusionList { get; set; }
 
-        List<Tuple<double, double, double>>[] Boxes { get; set;  }
+        List<List<Tuple<double, double, double>>> Boxes { get; set;  }
 
 
         #region TakeOver
@@ -452,9 +453,9 @@ namespace MetaLive
                         lock (lockerScan)
                         {
                             FullScan.PlaceFullScan(m_scans, Parameters);
-                            BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
+                            BoxCarScan.PlaceStaticBoxCarScan(m_scans, Parameters);
                         }
-                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
+                        BoxCarScanNum = Parameters.BoxCarScanSetting.NumberOfBoxCarScans;
                     }
 
                 }
@@ -483,36 +484,35 @@ namespace MetaLive
                     //scan.CommonInformation.TryGetValue("ScanNumber", out scanNumber);
                     Console.WriteLine("In DynamicBoxCar_BU method, MS1 Scan arrived. Is BoxCar Scan: {0}.", isBoxCarScan);
 
-                    if (!isBoxCarScan && Parameters.MS2ScanSetting.DoMS2)
+                    if (!isBoxCarScan)
                     {
-                        List<IsoEnvelop> isoEnvelops = Deconvolute_BU(scan);
+                        List<IsoEnvelop> isoEnvelops = Deconvolute_BU(scan);            
 
-                        Boxes = GenerateBoxes_BU(isoEnvelops, Parameters);
+                        if (isoEnvelops.Count > 0)
+                        {                        
+                            if (Parameters.MS2ScanSetting.DoMS2)
+                            {
+                                PlaceBU_MS2Scan(scan, isoEnvelops);
+                            }
 
-                        PlaceBU_MS2Scan(scan, isoEnvelops);
+                            BoxCarScan.GenerateDynamicBoxes_BU(isoEnvelops, Parameters, Boxes);
 
-                    }
-
-                    if (isBoxCarScan)
-                    {
-                        BoxCarScanNum--;
-                    }
-
-                    if (BoxCarScanNum == 0)
-                    {
-                        lock (lockerScan)
-                        {
                             FullScan.PlaceFullScan(m_scans, Parameters);
 
                             //The nearby Full mass scans in the current DDA method are very similar, so it is possible to use the previous full scan to generate the current boxes.
-                            if (Boxes.Length > 0)
+                            if (Boxes.Count > 0)
                             {
-                                BoxCarScan.PlaceBoxCarScan_BU(m_scans, Parameters, Boxes);
+                                BoxCarScan.PlaceDynamicBoxCarScan_BU(m_scans, Parameters, Boxes);
+
+                                Boxes.Clear();
                             }
                         }
-                        BoxCarScanNum = Parameters.BoxCarScanSetting.BoxCarScans;
-                    }
 
+                        else
+                        {
+                            FullScan.PlaceFullScan(m_scans, Parameters);
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -520,51 +520,6 @@ namespace MetaLive
                 Console.WriteLine("AddScanIntoQueue_DynamicBoxCar_Bu MS2FromFullScan Exception!");
                 Console.WriteLine(e.ToString() + " " + e.Source);
             }
-        }
-
-        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
-        public static List<Tuple<double, double, double>>[] GenerateBoxes_BU(List<IsoEnvelop> isoEnvelops, Parameters parameters)
-        {
-            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
-            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
-
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
-
-            for (int i = 1; i < mzs.Count; i++)
-            {
-                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
-            }
-
-            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), parameters.BoxCarScanSetting.BoxCarMzRangeHighBound, parameters.BoxCarScanSetting.BoxCarMzRangeHighBound - mzs.Last());
-
-            //return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
-
-            List<Tuple<double, double, double>>[] boxes = new List<Tuple<double, double, double>>[parameters.BoxCarScanSetting.BoxCarBoxes];
-
-            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarBoxes; i++)
-            {
-                boxes[i] = new List<Tuple<double, double, double>>();
-            }
-
-            int j = 0;
-            foreach (var r in ranges)
-            {
-                //Make sure the range is longer than 10. 
-                if (r.Item3 > 10)
-                {
-                    if (j <= parameters.BoxCarScanSetting.BoxCarBoxes-1)
-                    {
-                        boxes[j].Add(r);
-                        j++;
-                    }
-                    else
-                    {
-                        j = 0;
-                    }
-                }
-            }
-
-            return boxes;
         }
 
         #endregion
@@ -649,9 +604,9 @@ namespace MetaLive
 
                                 }
 
-                                var boxes = GenerateBoxes_TD(isoEnvelops);
+                                var boxes = BoxCarScan.GenerateDynamicBoxes_TD(isoEnvelops);
 
-                                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters, boxes);
+                                BoxCarScan.PlaceDynamicBoxCarScan(m_scans, Parameters, boxes);
                             }
                             else
                             {
@@ -773,23 +728,6 @@ namespace MetaLive
             }
         }
 
-        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
-        public static Tuple<double, double, double>[] GenerateBoxes_TD(List<IsoEnvelop> isoEnvelops)
-        {
-            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
-            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
-
-            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
-
-            for (int i = 1; i < mzs.Count; i++)
-            {
-                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
-            }
-            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
-
-            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
-
-        }
 
         #endregion
 

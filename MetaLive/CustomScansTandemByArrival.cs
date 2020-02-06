@@ -98,7 +98,7 @@ namespace MetaLive
 
                 DataDependentScan.PlaceMS2Scan(m_scans, Parameters, 750);
 
-                BoxCarScan.PlaceBoxCarScan(m_scans, Parameters);
+                BoxCarScan.PlaceStaticBoxCarScan(m_scans, Parameters);
             }
 		}
 

@@ -35,8 +35,8 @@ namespace MetaLive
 
     public class BoxCarScanSetting
     {
-        public int BoxCarScans { get; set; }
-        public int BoxCarBoxes { get; set; }
+        public int NumberOfBoxCarScans { get; set; }
+        public int NumberOfBoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
         public int BoxCarMaxInjectTimeInMillisecond { get; set; }
         public int BoxCarResolution { get; set; }

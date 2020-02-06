@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 using Chemistry;
+using MassSpectrometry;
 
 namespace MetaLive
 {
@@ -14,7 +15,9 @@ namespace MetaLive
         public static string StaticBoxCarScanTargets { get; set; }
         public static string StaticBoxCarScanMaxIts { get; set; }
 
-        public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters)
+        #region Static BoxCar 
+
+        public static void PlaceStaticBoxCarScan(IScans m_scans, Parameters parameters)
         {
             if (m_scans.PossibleParameters.Length == 0)
             {
@@ -44,10 +47,10 @@ namespace MetaLive
             scan.Values["MsxInjectMaxITs"] = StaticBoxCarScanMaxIts;
             scan.Values["MsxInjectNCEs"] = "[]";
             scan.Values["MsxInjectDirectCEs"] = "[]";
-            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
-            {               
+            for (int i = 0; i < parameters.BoxCarScanSetting.NumberOfBoxCarScans; i++)
+            {
                 scan.Values["MsxInjectRanges"] = StaticBoxCarScanRanges[i];
-              
+
                 Console.WriteLine("{0:HH:mm:ss,fff} placing BoxCar MS1 scan", DateTime.Now);
                 m_scans.SetCustomScan(scan);
             }
@@ -63,7 +66,7 @@ namespace MetaLive
             var end = 0.9;
 
             List<double> sep = new List<double>();
-            int totalSep = parameters.BoxCarScanSetting.BoxCarBoxes * parameters.BoxCarScanSetting.BoxCarScans + 1;
+            int totalSep = parameters.BoxCarScanSetting.NumberOfBoxCarBoxes * parameters.BoxCarScanSetting.NumberOfBoxCarScans + 1;
             for (int i = 0; i < totalSep; i++)
             {
                 var p = start + (end - start) / (totalSep - 1) * i;
@@ -163,10 +166,10 @@ namespace MetaLive
             mzs[0] = mzs.First() + parameters.BoxCarScanSetting.BoxCarOverlap;
             mzs[mzs.Count-1] = mzs.Last() - parameters.BoxCarScanSetting.BoxCarOverlap;
 
-            var staticBoxes = GenerateStaticBoxes(mzs, parameters.BoxCarScanSetting.BoxCarScans);
+            var staticBoxes = GenerateStaticBoxes(mzs, parameters.BoxCarScanSetting.NumberOfBoxCarScans);
 
-            StaticBoxCarScanRanges = new string[parameters.BoxCarScanSetting.BoxCarScans];
-            for (int i = 0; i < parameters.BoxCarScanSetting.BoxCarScans; i++)
+            StaticBoxCarScanRanges = new string[parameters.BoxCarScanSetting.NumberOfBoxCarScans];
+            for (int i = 0; i < parameters.BoxCarScanSetting.NumberOfBoxCarScans; i++)
             {
                 StaticBoxCarScanRanges[i] = GenerateStaticBoxString(parameters, staticBoxes[i], out dynamicTargets, out dynamicMaxIts);
                 StaticBoxCarScanTargets = dynamicTargets;
@@ -174,15 +177,90 @@ namespace MetaLive
             }
         }
 
-        public static void PlaceBoxCarScan_BU(IScans m_scans, Parameters parameters, List<Tuple<double, double, double>>[] dynamicBoxs)
+        #endregion
+
+        #region DynamicBoxCar Bottom-Up
+
+        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
+        public static void GenerateDynamicBoxes_BU(List<IsoEnvelop> isoEnvelops, Parameters parameters, List<List<Tuple<double, double, double>>> boxes)
         {
-            foreach (var dynamicBox in dynamicBoxs)
+            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            var mzs = isoEnvelops.Where(p => p.Mz > parameters.BoxCarScanSetting.BoxCarMzRangeLowBound
+                && p.Mz < parameters.BoxCarScanSetting.BoxCarMzRangeHighBound 
+                && p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToArray();
+
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Length + 1];
+
+            ranges[0] = new Tuple<double, double, double>(parameters.BoxCarScanSetting.BoxCarMzRangeLowBound, mzs[0], mzs[0] - parameters.BoxCarScanSetting.BoxCarMzRangeLowBound);
+            for (int i = 1; i < mzs.Length; i++)
             {
-                PlaceBoxCarScan(m_scans, parameters, dynamicBox.ToArray());
+                ranges[i] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+            }
+
+            ranges[mzs.Length] = new Tuple<double, double, double>(mzs.Last(), parameters.BoxCarScanSetting.BoxCarMzRangeHighBound, parameters.BoxCarScanSetting.BoxCarMzRangeHighBound - mzs.Last());
+
+            for (int i = 0; i < parameters.BoxCarScanSetting.NumberOfBoxCarScans; i++)
+            {
+                var tuples = new List<Tuple<double, double, double>>();
+                boxes.Add(tuples);
+            }
+
+
+            int j = 0;
+            foreach (var r in ranges)
+            {
+                //Make sure the range is longer than 10. 
+                if (r.Item3 > 5)
+                {
+                    if (j <= parameters.BoxCarScanSetting.NumberOfBoxCarScans - 1)
+                    {
+                        boxes[j].Add(r);
+                        j++;
+                    }
+                    else
+                    {
+                        j = 0;
+                    }
+                }
             }
         }
 
-        public static void PlaceBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)
+        public static void PlaceDynamicBoxCarScan_BU(IScans m_scans, Parameters parameters, List<List<Tuple<double, double, double>>> dynamicBoxs)
+        {
+            foreach (var dynamicBox in dynamicBoxs)
+            {
+                if (dynamicBox.Count > 0)
+                {
+                    PlaceDynamicBoxCarScan(m_scans, parameters, dynamicBox.ToArray());
+                }
+            }
+        }
+
+        #endregion
+
+        #region DynamicBoxCar TopDown
+
+        //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
+        public static Tuple<double, double, double>[] GenerateDynamicBoxes_TD(List<IsoEnvelop> isoEnvelops)
+        {
+            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            var mzs = isoEnvelops.Where(p => p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToList();
+
+            Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Count];
+
+            for (int i = 1; i < mzs.Count; i++)
+            {
+                ranges[i - 1] = new Tuple<double, double, double>(mzs[i - 1], mzs[i], mzs[i] - mzs[i - 1]);
+            }
+            ranges[mzs.Count - 1] = new Tuple<double, double, double>(mzs.Last(), 2000, 2000 - mzs.Last());
+
+            return ranges.OrderByDescending(p => p.Item3).Where(p => p.Item3 > 15).Take(12).OrderBy(p => p.Item1).ToArray();
+
+        }
+
+        #endregion
+
+        public static void PlaceDynamicBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)
         {
             if (m_scans.PossibleParameters.Length == 0)
             {
