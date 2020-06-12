@@ -29,7 +29,7 @@ using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 using Thermo.Interfaces.InstrumentAccess_V1.MsScanContainer;
 using IMsScan = Thermo.Interfaces.InstrumentAccess_V2.MsScanContainer.IMsScan;
 
-namespace MetaLive
+namespace MetaDrive
 {
 	class CustomScansTandemByArrival
 	{

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace MetaLive
+namespace MetaDrive
 {
     public class DynamicExclusionList
     {

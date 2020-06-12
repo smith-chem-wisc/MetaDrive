@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.IO;
 using MathNet;
-using MetaLive;
+using MetaDrive;
 using IO.MzML;
 
 namespace UnitTest
@@ -91,6 +91,8 @@ namespace UnitTest
 
             List<List<Tuple<double, double, double>>> Boxes = new List<List<Tuple<double, double, double>>>();
             BoxCarScan.GenerateDynamicBoxes_BU(isos, parameters, Boxes);
+
+            Assert.That(Boxes.Count == 2);
         }
 
     }

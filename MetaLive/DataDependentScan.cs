@@ -7,7 +7,7 @@ using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 using Chemistry;
 
 
-namespace MetaLive
+namespace MetaDrive
 {
     public class DataDependentScan
     {

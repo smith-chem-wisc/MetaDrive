@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 
 
-namespace MetaLive
+namespace MetaDrive
 {
     class FullScan
     {

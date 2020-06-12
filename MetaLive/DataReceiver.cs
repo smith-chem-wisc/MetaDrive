@@ -36,7 +36,7 @@ using MzLibUtil;
 using Chemistry;
 
 
-namespace MetaLive
+namespace MetaDrive
 {
     /// <summary>
     /// Show incoming data packets and signals of acquisition start, acquisition stop and each scan.
@@ -503,6 +503,9 @@ namespace MetaLive
                             if (Boxes.Count > 0)
                             {
                                 BoxCarScan.PlaceDynamicBoxCarScan_BU(m_scans, Parameters, Boxes);
+
+                                //To generate data for comparison
+                                BoxCarScan.PlaceStaticBoxCarScan(m_scans, Parameters);
 
                                 Boxes.Clear();
                             }

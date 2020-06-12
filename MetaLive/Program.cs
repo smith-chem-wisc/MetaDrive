@@ -10,7 +10,7 @@ using UsefulProteomicsDatabases;
 using System.IO;
 using Nett;
 
-namespace MetaLive
+namespace MetaDrive
 {
     public class Program
     {

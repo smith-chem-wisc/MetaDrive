@@ -7,7 +7,7 @@ using Thermo.Interfaces.InstrumentAccess_V1.Control.Scans;
 using Chemistry;
 using MassSpectrometry;
 
-namespace MetaLive
+namespace MetaDrive
 {
     public class BoxCarScan
     {
@@ -184,10 +184,9 @@ namespace MetaLive
         //return Tuple<double, double, double> for each box start m/z, end m/z, m/z length
         public static void GenerateDynamicBoxes_BU(List<IsoEnvelop> isoEnvelops, Parameters parameters, List<List<Tuple<double, double, double>>> boxes)
         {
-            var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
+            //var thred = isoEnvelops.OrderByDescending(p => p.IntensityRatio).First().IntensityRatio / 20;
             var mzs = isoEnvelops.Where(p => p.Mz > parameters.BoxCarScanSetting.BoxCarMzRangeLowBound
-                && p.Mz < parameters.BoxCarScanSetting.BoxCarMzRangeHighBound 
-                && p.IntensityRatio > thred).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToArray();
+                && p.Mz < parameters.BoxCarScanSetting.BoxCarMzRangeHighBound).OrderBy(p=>p.TotalIntensity).Take(30).Select(p => p.ExperimentIsoEnvelop.First().Mz).OrderBy(p => p).ToArray();
 
             Tuple<double, double, double>[] ranges = new Tuple<double, double, double>[mzs.Length + 1];
 
@@ -207,21 +206,18 @@ namespace MetaLive
 
 
             int j = 0;
-            foreach (var r in ranges)
+            foreach (var r in ranges.Where(p=>p.Item3 > 3)) //If the range is too small, say 5, there is no need to place a box between. 
             {
-                //Make sure the range is longer than 10. 
-                if (r.Item3 > 5)
+                if (j <= parameters.BoxCarScanSetting.NumberOfBoxCarScans - 1)
                 {
-                    if (j <= parameters.BoxCarScanSetting.NumberOfBoxCarScans - 1)
-                    {
-                        boxes[j].Add(r);
-                        j++;
-                    }
-                    else
-                    {
-                        j = 0;
-                    }
+                    boxes[j].Add(r);
+                    j++;
                 }
+                else
+                {
+                    j = 0;
+                }
+
             }
         }
 

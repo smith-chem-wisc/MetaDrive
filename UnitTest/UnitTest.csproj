@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MetaLive\MetaLive.csproj" />
+    <ProjectReference Include="..\MetaLive\MetaDrive.csproj" />
   </ItemGroup>
 
   <ItemGroup>
