@@ -7,8 +7,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>MetaLive</RootNamespace>
-    <AssemblyName>MetaLive</AssemblyName>
+    <RootNamespace>MetaDrive</RootNamespace>
+    <AssemblyName>MetaDrive</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

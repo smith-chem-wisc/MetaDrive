@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30204.135
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetaDrive", "MetaLive\MetaDrive.csproj", "{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetaDrive", "MetaDrive\MetaDrive.csproj", "{E9C4278F-A716-4A08-882B-3AC2A9ED3C7D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTest", "UnitTest\UnitTest.csproj", "{10DA93B3-9E76-43EC-8100-1C4037AA0DD0}"
 EndProject
