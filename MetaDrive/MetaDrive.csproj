@@ -56,20 +56,24 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="API-1.0">
-      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\API-1.0.dll</HintPath>
+    <Reference Include="API-1.0, Version=1.0.0.27, Culture=neutral, PublicKeyToken=4928eef831aedd73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>IAPI\API-1.0.dll</HintPath>
     </Reference>
-    <Reference Include="API-1.1">
-      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\API-1.1.dll</HintPath>
+    <Reference Include="API-1.1, Version=1.1.0.2, Culture=neutral, PublicKeyToken=4928eef831aedd73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>IAPI\API-1.1.dll</HintPath>
     </Reference>
     <Reference Include="Chemistry, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.435\lib\net471\Chemistry.dll</HintPath>
     </Reference>
-    <Reference Include="ESAPI-1.0">
-      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\ESAPI-1.0.dll</HintPath>
+    <Reference Include="ESAPI-1.0, Version=1.0.0.27, Culture=neutral, PublicKeyToken=4928eef831aedd73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>IAPI\ESAPI-1.0.dll</HintPath>
     </Reference>
-    <Reference Include="ESAPI-1.1">
-      <HintPath>..\..\iapi\docs\exactive\3 DataListening\Dependencies\ESAPI-1.1.dll</HintPath>
+    <Reference Include="ESAPI-1.1, Version=1.1.0.1, Culture=neutral, PublicKeyToken=4928eef831aedd73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>IAPI\ESAPI-1.1.dll</HintPath>
     </Reference>
     <Reference Include="FlashLFQ, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\mzLib.1.0.435\lib\net471\FlashLFQ.dll</HintPath>
@@ -164,6 +168,33 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="IAPI\API-1.0.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\API-1.0.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\API-1.1.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\API-1.1.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\ESAPI-1.0.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\ESAPI-1.0.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\ESAPI-1.1.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IAPI\ESAPI-1.1.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\mzLib.1.0.435\build\net471\mzLib.targets" Condition="Exists('..\packages\mzLib.1.0.435\build\net471\mzLib.targets')" />
