@@ -146,7 +146,6 @@
     <Compile Include="Deconvolution\ChargeDecon.cs" />
     <Compile Include="Deconvolution\ChargeEnvelop.cs" />
     <Compile Include="Deconvolution\DeconvolutionParameter.cs" />
-    <Compile Include="Deconvolution\Graph.cs" />
     <Compile Include="Deconvolution\IsoDecon.cs" />
     <Compile Include="Deconvolution\IsoEnvelop.cs" />
     <Compile Include="Deconvolution\MzSpectrumXY.cs" />
@@ -167,13 +166,11 @@
     <None Include="Data\Parameters.toml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Deconvolution\Thermofisher.Foundation.IO_x64.dll.config" />
     <None Include="IAPI\Thermofisher.Foundation.IO_x64.dll.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Content Include="Deconvolution\Thermofisher.Foundation.IO_x64.dll" />
     <Content Include="IAPI\API-1.0.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
