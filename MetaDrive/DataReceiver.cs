@@ -53,7 +53,6 @@ namespace MetaDrive
         bool firstFullScanPlaced = false;
 
         bool dynamicExclude = true;
-        bool placeUserDefinedScan = true;
         int BoxCarScanNum = 0;
         bool TimeIsOver = false;
 
@@ -236,7 +235,6 @@ namespace MetaDrive
         private void Orbitrap_AcquisitionStreamClosing(object sender, EventArgs e)
 		{
             dynamicExclude = false;
-            placeUserDefinedScan = false;
 
             Console.WriteLine("\n{0:HH:mm:ss,fff} {1}", DateTime.Now, "Acquisition stream closed (end of method)");            
         }	   
@@ -347,6 +345,7 @@ namespace MetaDrive
         #endregion
 
         #region ShotGun WorkFlow
+        //Tranditional ShotGun DDA workflow.
 
         private void AddScanIntoQueue_ShotGun(IMsScan scan)
         {
@@ -425,6 +424,7 @@ namespace MetaDrive
         #region StaticBox WorkFlow
 
         //In StaticBox, the MS1 scan contains a lot of features. There is no need to extract features from BoxCar Scans for placing MS2 scans.
+        //The workflow is similar to the 'BoxCar' paper in Nature Method. 
         private void AddScanIntoQueue_StaticBox(IMsScan scan)
         {
             try
@@ -470,7 +470,8 @@ namespace MetaDrive
         #endregion
 
         #region DynamicBox_BU WorkFlow
-
+        //In bottom up, it is possible to change the BoxCar ranges based on the real full mass scan.
+        //The workflow works, but the improvement is hard to evaluate so far.
         private void AddScanIntoQueue_BynamicBoxCar_BU(IMsScan scan)
         {
             try
@@ -528,6 +529,9 @@ namespace MetaDrive
         #endregion
 
         #region DynamicBox_TD WorkFlow
+        //Dynamic BoxCar for Top-down, include two workflows.
+        //Dynamic BoxCar for MS1 level only, which is focused on improving 'finding more low abundant proteoforms'. 
+        //Dynamic BoxCar for MS2 level only, which is also known as 'Fragmentation Mesh'. which is focused on improving 'fragmentation efficiency'.
 
         private void DynamicDBCExclusionListDeque()
         {
@@ -661,7 +665,7 @@ namespace MetaDrive
             {
                 if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
                 {
-                    break;
+                    return;
                 }
 
                 var mzs = ce.distributions.Select(p => p.mz).OrderBy(p => p).ToArray();
@@ -671,7 +675,7 @@ namespace MetaDrive
                 if (matchedCount == 0)
                 {
                     Console.WriteLine("DynamicDBCExclusionList didn't match.");
-                    if (Parameters.MS2ScanSetting.DoDbcMS2)
+                    if (Parameters.BoxCarScanSetting.DoDbcForMS2)
                     {
                         DataDependentScan.PlaceMS2Scan(m_scans, Parameters, ce.mzs_box);
                     }
@@ -707,12 +711,16 @@ namespace MetaDrive
                 }
             }
 
+            if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
+            {
+                return;
+            }
 
             foreach (var iso in isoEnvelops)
             {
                 if (placeScanCount >= Parameters.MS1IonSelecting.TopN)
                 {
-                    break;
+                    return;
                 }
 
                 if (DynamicExclusionList.isNotInExclusionList(iso.ExperimentIsoEnvelop.First().Mz, Parameters.MS1IonSelecting.ExclusionTolerance))
@@ -731,11 +739,12 @@ namespace MetaDrive
             }
         }
 
-
         #endregion
 
         #region UserDefinedWorkFlow
-
+        //Used to manully decide scan placements. Generally for standard proteins.
+        //For example in the following code we munally analyzed fragmentation of Myoglobin.
+        //TO DO: it is possible to make this auto. 
         private void AddScanIntoQueue_UserDefined(IMsScan scan)
         {
             try

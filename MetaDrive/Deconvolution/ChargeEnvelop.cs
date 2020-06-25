@@ -83,12 +83,16 @@ namespace MassSpectrometry
             }
         }
 
+        //How to select 'Fragmentation Mesh'
         public List<double> mzs_box
         {
             get
             {
                 int edge = distributions_withIso.Count >= 8 ? 2 : 1;
-                return distributions_withIso.OrderByDescending(p => p.isoEnvelop.TotalIntensity).Take(distributions_withIso.Count*2/3 + edge).OrderBy(p=>p.charge).Where((x, i) => i % 2 == 0).Select(p => p.isoEnvelop.ExperimentIsoEnvelop.First().Mz).ToList();
+                return distributions_withIso.OrderByDescending(p => p.isoEnvelop.TotalIntensity)
+                    .Take(distributions_withIso.Count*2/3 + edge).OrderBy(p=>p.charge)
+                    .Where((x, i) => i % 2 == 0)
+                    .Select(p => p.isoEnvelop.ExperimentIsoEnvelop.First().Mz).ToList();
             }
         }
     }

@@ -36,6 +36,10 @@ namespace MetaDrive
 
     public class BoxCarScanSetting
     {
+        public bool DoDbcForMS1 { get; set; }
+
+        public bool DoDbcForMS2 { get; set; }
+
         public int NumberOfBoxCarScans { get; set; }
         public int NumberOfBoxCarBoxes { get; set; }
         public int BoxCarOverlap { get; set; }
@@ -47,7 +51,6 @@ namespace MetaDrive
         public double BoxCarMzRangeHighBound { get; set; }
         public int BoxCarMicroScans { get; set; }
         public double DynamicBlockSize { get; set; }
-        public bool DoDbcForMS1 { get; set; }
         public bool PrecursorSkipScan { get; set; } //Is the precursors from one MS1 scan before the nearest one
     }
 
@@ -75,7 +78,6 @@ namespace MetaDrive
     public class MS2ScanSetting
     {
         public bool DoMS2 { get; set; }
-        public bool DoDbcMS2 { get; set; }
         public int MS2MaxInjectTimeInMillisecond { get; set; }
         public int MS2Resolution { get; set; }
         public int NCE { get; set; }
