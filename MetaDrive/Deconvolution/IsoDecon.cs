@@ -418,30 +418,6 @@ namespace MassSpectrometry
             return index - 1;
         }
 
-        public static Tuple<double, double>[] GenerateIntervals(List<IsoEnvelop> isoEnvelops)
-        {
-            HashSet<double> indics = new HashSet<double>();
-            foreach (var iso in isoEnvelops)
-            {
-                indics.Add(iso.ExistedExperimentPeak.Min(p => p.Mz));
-                indics.Add(iso.ExistedExperimentPeak.Max(p => p.Mz));
-            }
-
-            var intervals = indics.OrderBy(p => p).ToArray();
-
-            Tuple<double, double>[] tuples = new Tuple<double, double>[intervals.Length + 1];
-            tuples[0] = new Tuple<double, double>(int.MinValue, intervals[0]);
-
-            for (int i = 1; i < intervals.Length; i++)
-            {
-                tuples[i] = new Tuple<double, double>(intervals[i - 1], intervals[i]);
-            }
-
-            tuples[intervals.Length] = new Tuple<double, double>(intervals[intervals.Length - 1], int.MaxValue);
-
-            return tuples;
-        }
-
         #endregion
     }
 }

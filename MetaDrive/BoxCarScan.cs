@@ -255,7 +255,7 @@ namespace MetaDrive
         }
 
         #endregion
-
+        //parameter Tuple<double, double, double> for each box start m/z, end m/z, m/z length
         public static void PlaceDynamicBoxCarScan(IScans m_scans, Parameters parameters, Tuple<double, double, double>[] dynamicBox)
         {
             if (m_scans.PossibleParameters.Length == 0)

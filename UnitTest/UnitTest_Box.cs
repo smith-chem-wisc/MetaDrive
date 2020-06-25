@@ -64,9 +64,9 @@ namespace UnitTest
             string dynamicTargets;
             string dynamicMaxITs;
             var test = BoxCarScan.BuildDynamicBoxString(Parameters, tuples, out dynamicTargets, out dynamicMaxITs);
-            Assert.AreEqual(test, "[(400.0,636.5),(638.5,665.4),(667.4,697.2),(699.2,1200.0)]");
-            Assert.That(dynamicTargets == "[166666,166666,166666]");
-            Assert.That(dynamicMaxITs == "[84,84,84]");
+            Assert.AreEqual(test, "[(402.50,634.00),(641.00,662.90),(669.90,694.70),(701.70,1197.50)]");
+            Assert.That(dynamicTargets == "[125000,125000,125000,125000]");
+            Assert.That(dynamicMaxITs == "[63,63,63,63]");
 
             var dynamicInclusion = BoxCarScan.BuildDynamicBoxInclusionString(Parameters, masses, out dynamicTargets, out dynamicMaxITs);
 

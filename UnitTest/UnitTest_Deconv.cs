@@ -139,7 +139,8 @@ namespace UnitTest
 
         }
 
-        [Test]
+        //This is not really a test, but could help to kown the deconvolution speed.
+        //[Test]
         public static void Test_ChargeDeconvFile()
         {
             //string FilepathMZML = "E:\\MassData\\20190912_TD_yeast_DBC\\20190912_Yeast7_DBC_FullScanFirst_T3_TopDown.mzML";
@@ -210,88 +211,6 @@ namespace UnitTest
                     output.WriteLine(theEvaluation.Item1.ToString() + "\t" + theEvaluation.Item2 + "\t" + theEvaluation.Item3.ToString() + "\t" + theEvaluation.Item4.ToString() + "\t" + theEvaluation.Item5 + "\t" + +theEvaluation.Item6);
                 }
             }
-
-        }
-
-        [Test]
-        public static void Test_PartnerDeconvFile()
-        {
-            string FilepathMZML = "E:\\MassData\\20191107\\20191107_StdMix_DSSd0d4_postmix1to1.mzML";
-            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
-            var scans = file.GetAllScansList().Where(p => p.MsnOrder == 1).ToArray();
-
-            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter
-            {
-                 DeconvolutionMinAssumedChargeState = 2,
-                 DeconvolutionMaxAssumedChargeState = 8,             
-            };
-
-            var spectrum_test = new MzSpectrumXY(scans.Where(p=>p.OneBasedScanNumber == 19467).First().MassSpectrum.XArray, scans.Where(p => p.OneBasedScanNumber == 19467).First().MassSpectrum.YArray, true);
-            var iso_test = IsoDecon.MsDeconv_Deconvolute(spectrum_test, spectrum_test.Range, deconvolutionParameter).ToList();
-
-            Tuple<int, double, long, long, long, long>[] watches = new Tuple<int, double, long, long, long, long>[scans.Length];
-
-            for (int i = 0; i < scans.Length; i++)
-            {
-                Stopwatch stopwatch0 = new Stopwatch();
-                stopwatch0.Start();
-                var spectrum = new MzSpectrumXY(scans[i].MassSpectrum.XArray, scans[i].MassSpectrum.YArray, true);
-                stopwatch0.Stop();
-
-                Stopwatch stopwatch_iso = new Stopwatch();
-                stopwatch_iso.Start();
-                var iso = IsoDecon.MsDeconv_Deconvolute(spectrum, spectrum.Range, deconvolutionParameter);
-
-                var test1 = iso.ToList();
-                stopwatch_iso.Stop();
-
-                Stopwatch stopwatch1 = new Stopwatch();
-                stopwatch1.Start();
-
-                stopwatch1.Stop();
-
-
-                var stopwatch2 = Stopwatch.StartNew();
-                var isoEnvelops = new List<IsoEnvelop>();
-
-                stopwatch2.Stop();
-
-                watches[i] = new Tuple<int, double, long, long, long, long>(scans[i].OneBasedScanNumber, scans[i].RetentionTime, stopwatch0.ElapsedMilliseconds, stopwatch_iso.ElapsedMilliseconds, stopwatch1.ElapsedMilliseconds, stopwatch2.ElapsedMilliseconds);
-            }
-
-            var writtenFile = Path.Combine(Path.GetDirectoryName(FilepathMZML), "watches.mytsv");
-            using (StreamWriter output = new StreamWriter(writtenFile))
-            {
-                output.WriteLine("ScanNum\tRT\tConstruct\tIsoTime\tChargeDeconTime\tQuickChargeDeconTime");
-                foreach (var theEvaluation in watches.OrderBy(p => p.Item1))
-                {
-                    output.WriteLine(theEvaluation.Item1.ToString() + "\t" + theEvaluation.Item2 + "\t" + theEvaluation.Item3.ToString() + "\t" + theEvaluation.Item4.ToString() + "\t" + theEvaluation.Item5 + "\t" + +theEvaluation.Item6);
-                }
-            }
-        }
-
-
-        [Test]
-        public static void TestIntervals()
-        {
-            string FilepathMZML = "E:\\MassData\\20191107_QXL\\20191107_StdMix_DSSd0d4_postmix1to1.mzML";
-            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
-            var scans = file.GetAllScansList().Where(p => p.MsnOrder == 1).ToArray();
-
-
-            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter
-            {
-                DeconvolutionMinAssumedChargeState = 2,
-                DeconvolutionMaxAssumedChargeState = 8,
-    
-            };
-
-
-            var spectrum_test = new MzSpectrumXY(scans.Where(p => p.OneBasedScanNumber == 14995).First().MassSpectrum.XArray, scans.Where(p => p.OneBasedScanNumber == 14995).First().MassSpectrum.YArray, true);
-            var iso_test = IsoDecon.MsDeconv_Deconvolute(spectrum_test, spectrum_test.Range, deconvolutionParameter).ToList();
-   
-            var tuples = IsoDecon.GenerateIntervals(iso_test);
-            Assert.AreEqual(tuples.Count(), 5);
 
         }
 

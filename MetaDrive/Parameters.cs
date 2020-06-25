@@ -26,7 +26,7 @@ namespace MetaDrive
 
     public class GeneralSetting
     {
-        public bool TestMod { get; set; }
+        public bool TestMod { get; set; } //When we want to know more about IAPI, we use test mode to output IAPI information.
         public MethodTypes MethodType { get; set; }
         public int TotalTimeInMinute { get; set; }
         public int Polarity { get; set; }
