@@ -90,6 +90,24 @@ namespace UnitTest
         }
 
         [Test]
+        public static void Test_FragmentMesh()
+        {
+            string FilepathMZML = Path.Combine(TestContext.CurrentContext.TestDirectory, @"Data/2076.mzML");
+            MsDataFile file = Mzml.LoadAllStaticData(FilepathMZML, null);
+            var scans = file.GetAllScansList();
+
+            DeconvolutionParameter deconvolutionParameter = new DeconvolutionParameter();
+            var spectrum = new MzSpectrumXY(scans.First().MassSpectrum.XArray, scans.First().MassSpectrum.YArray, true);
+
+            var CEs = ChargeDecon.FindChargesForScan(spectrum, deconvolutionParameter);
+
+            var mesh = CEs.First().mzs_box;
+
+            Assert.That(mesh.Count() == 3);
+            
+        }
+
+        [Test]
         public static void Test_Charge()
         {
             //double mz = 854.64246;
