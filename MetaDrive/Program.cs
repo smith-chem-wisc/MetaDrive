@@ -18,6 +18,10 @@ namespace MetaDrive
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
+            //Quick way to check parameters
+            //var apath = "G:\\Parameters\\Parameters_Topdown_ChargeExclusion_Mesh.toml";
+            //Parameters aparameters = AddParametersFromFile(apath);
+
             //Initiate Element
             Loaders.LoadElements();
             //Loading avagine model for Deconvolution
@@ -29,9 +33,6 @@ namespace MetaDrive
             {
                 path = args[0];
             }
-
-            //Quick way to check parameters
-            //path = "G:\\Parameters\\Parameters_DynamicBox_BU.toml";
 
             Parameters parameters = AddParametersFromFile(path);
 
